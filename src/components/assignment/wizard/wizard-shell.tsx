@@ -9,6 +9,7 @@ import { WizardStepRail } from "./wizard-step-rail";
 
 interface WizardShellProps {
   children: ReactNode;
+  title?: string;
   primaryLabel?: string;
   primaryDisabled?: boolean;
   primaryLoading?: boolean;
@@ -21,6 +22,7 @@ interface WizardShellProps {
 
 export function WizardShell({
   children,
+  title = "New Assignment",
   primaryLabel = "Proceed",
   primaryDisabled = false,
   primaryLoading = false,
@@ -59,7 +61,7 @@ export function WizardShell({
           </HStack>
           <Box w="1px" h="24px" bg="gray.200" />
           <Heading as="h1" size="md" color="gray.900">
-            New Assignment
+            {title}
           </Heading>
         </HStack>
 

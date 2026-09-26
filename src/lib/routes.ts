@@ -30,6 +30,8 @@ export const coursePaths = {
 export const assignmentPaths = {
   list: "/assignment",
   new: "/assignment/new",
+  /** Resume a draft in the builder. */
+  edit: (assignmentId: string) => `/assignment/edit${qs({ assignmentId })}`,
   details: (assignmentId: string) =>
     `/assignment/details${qs({ assignmentId })}`,
   grade: (assignmentId: string, submissionId: string) =>
