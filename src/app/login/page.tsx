@@ -9,6 +9,7 @@ import { AdminBadge } from "@/components/onboarding/admin-badge";
 import { FormField } from "@/components/onboarding/form-field";
 import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { PasswordField } from "@/components/onboarding/password-field";
+import { GuestGuard, getReturnTo } from "@/components/auth/auth-guard";
 import { OtpInput } from "@/components/login/otp-input";
 import { AppButton } from "@/components/ui/app-button";
 import { getApiErrorMessage } from "@/lib/api/client";
@@ -30,7 +31,7 @@ function formatMmSs(seconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   // The OTP step is rendered in-place (not a separate route) so the password
   // stays in memory and "resend" can re-call /admin/login with it.
@@ -91,8 +92,8 @@ export default function LoginPage() {
     const result = await verifyOtp(email, fullCode);
 
     if (result.success) {
-      toast.success("Verified! Redirecting to dashboard…");
-      router.replace("/dashboard");
+      toast.success("Verified! Redirecting…");
+      router.replace(getReturnTo());
     } else {
       setIsVerifying(false);
       setCode("");
@@ -232,5 +233,13 @@ export default function LoginPage() {
         </AppButton>
       </Stack>
     </OnboardingCard>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <GuestGuard>
+      <LoginForm />
+    </GuestGuard>
   );
 }

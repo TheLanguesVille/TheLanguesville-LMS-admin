@@ -352,7 +352,14 @@ export default function AssignmentListPage() {
                 <AssignmentRow
                   key={a.id}
                   assignment={a}
-                  onClick={() => router.push(assignmentPaths.details(a.id))}
+                  onClick={() =>
+                    router.push(
+                      // Drafts have no submissions yet — reopen them in the builder.
+                      a.status === "draft"
+                        ? assignmentPaths.edit(a.id)
+                        : assignmentPaths.details(a.id),
+                    )
+                  }
                 />
               ))
             )}

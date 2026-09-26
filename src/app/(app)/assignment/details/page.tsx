@@ -359,34 +359,52 @@ export default function AssignmentDetailPage() {
             >
               Delete
             </Box>
-            <Button
-              variant="outline"
-              rounded="full"
-              h="40px"
-              px={5}
-              fontSize="sm"
-              fontWeight="medium"
-              loading={sendingReminder}
-              disabled={reminderSent || sendingReminder}
-              onClick={handleSendReminder}
-            >
-              {reminderSent ? "Reminder sent" : "Send reminder"}
-            </Button>
-            <Button
-              bg="#2E2F6F"
-              color="white"
-              rounded="full"
-              h="40px"
-              px={5}
-              fontSize="sm"
-              fontWeight="medium"
-              _hover={{ bg: "#262760" }}
-              loading={exporting}
-              disabled={exporting}
-              onClick={handleExport}
-            >
-              Export submissions
-            </Button>
+            {assignment.status === "draft" ? (
+              <Button
+                bg="#2E2F6F"
+                color="white"
+                rounded="full"
+                h="40px"
+                px={5}
+                fontSize="sm"
+                fontWeight="medium"
+                _hover={{ bg: "#262760" }}
+                onClick={() => router.push(assignmentPaths.edit(assignmentId!))}
+              >
+                Continue editing
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  rounded="full"
+                  h="40px"
+                  px={5}
+                  fontSize="sm"
+                  fontWeight="medium"
+                  loading={sendingReminder}
+                  disabled={reminderSent || sendingReminder}
+                  onClick={handleSendReminder}
+                >
+                  {reminderSent ? "Reminder sent" : "Send reminder"}
+                </Button>
+                <Button
+                  bg="#2E2F6F"
+                  color="white"
+                  rounded="full"
+                  h="40px"
+                  px={5}
+                  fontSize="sm"
+                  fontWeight="medium"
+                  _hover={{ bg: "#262760" }}
+                  loading={exporting}
+                  disabled={exporting}
+                  onClick={handleExport}
+                >
+                  Export submissions
+                </Button>
+              </>
+            )}
           </HStack>
         </Flex>
 
