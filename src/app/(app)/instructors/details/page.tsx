@@ -71,6 +71,11 @@ function ReviewRow({ review, divider }: { review: InstructorReview; divider: boo
           </Text>
         </HStack>
       </Flex>
+      {review.courseTitle ? (
+        <Text fontSize="xs" color="gray.500">
+          on {review.courseTitle}
+        </Text>
+      ) : null}
       {review.comment ? (
         <Text fontSize="sm" color="gray.600">
           {review.comment}

@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   ArrowLeft,
+  Star,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -30,7 +31,9 @@ import { coursePaths } from "@/lib/routes";
 import {
   type ApiCourse,
   type ApiModuleDetail,
+  type CourseReviewsData,
   getCourse,
+  listCourseReviews,
   deleteCourse,
   publishCourse,
   unpublishCourse,
@@ -180,6 +183,181 @@ function CohortProgressSection({ completionRate }: { completionRate: number }) {
           </Stack>
         ))}
       </Stack>
+    </Box>
+  );
+}
+
+const REVIEWS_PAGE_SIZE = 5;
+
+function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
+  return (
+    <HStack gap={0.5}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          size={size}
+          color="#F59E0B"
+          fill={n <= Math.round(rating) ? "#F59E0B" : "transparent"}
+        />
+      ))}
+    </HStack>
+  );
+}
+
+/** Student ratings & feedback, written from the student portal. */
+function CourseReviewsSection({ courseId }: { courseId: string }) {
+  const [data, setData] = useState<CourseReviewsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const result = await listCourseReviews(courseId, {
+        page: 1,
+        limit: REVIEWS_PAGE_SIZE,
+      });
+      if (cancelled) return;
+      if (result.success) setData(result.data);
+      else toast.error(result.message || "Couldn't load reviews");
+      setLoading(false);
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [courseId]);
+
+  const loadMore = async () => {
+    if (!data) return;
+    setLoadingMore(true);
+    const result = await listCourseReviews(courseId, {
+      page: data.page + 1,
+      limit: REVIEWS_PAGE_SIZE,
+    });
+    if (result.success) {
+      setData({
+        ...result.data,
+        reviews: [...data.reviews, ...result.data.reviews],
+      });
+    } else {
+      toast.error(result.message || "Couldn't load reviews");
+    }
+    setLoadingMore(false);
+  };
+
+  return (
+    <Box bg="white" borderWidth="1px" borderColor="gray.200" rounded="xl" p={5}>
+      <Flex justify="space-between" align="center" mb={4}>
+        <Text fontWeight="semibold" fontSize="md" color="gray.900">
+          Reviews
+        </Text>
+        {data && data.total > 0 ? (
+          <Text fontSize="xs" color="gray.500">
+            {data.total} total
+          </Text>
+        ) : null}
+      </Flex>
+
+      {loading ? (
+        <Stack gap={3}>
+          <Skeleton height="28px" width="120px" rounded="md" />
+          <Skeleton height="14px" rounded="md" />
+          <Skeleton height="14px" width="70%" rounded="md" />
+        </Stack>
+      ) : !data || data.total === 0 ? (
+        <Text fontSize="sm" color="gray.500">
+          No reviews yet. Students can rate this course from their course
+          page.
+        </Text>
+      ) : (
+        <Stack gap={4}>
+          <HStack gap={3} align="center">
+            <Text fontSize="3xl" fontWeight="bold" color="gray.900" lineHeight={1}>
+              {data.average?.toFixed(1)}
+            </Text>
+            <Stack gap={1}>
+              <Stars rating={data.average ?? 0} />
+              <Text fontSize="xs" color="gray.500">
+                {data.total} review{data.total !== 1 ? "s" : ""}
+              </Text>
+            </Stack>
+          </HStack>
+
+          <Stack gap={1.5}>
+            {(["5", "4", "3", "2", "1"] as const).map((star) => {
+              const count = data.breakdown[star];
+              return (
+                <Flex key={star} align="center" gap={2}>
+                  <Text fontSize="xs" color="gray.600" w="10px">
+                    {star}
+                  </Text>
+                  <Box flex="1" bg="gray.100" rounded="full" h="6px">
+                    <Box
+                      bg="#F59E0B"
+                      rounded="full"
+                      h="6px"
+                      w={`${(count / data.total) * 100}%`}
+                    />
+                  </Box>
+                  <Text fontSize="xs" color="gray.500" minW="20px" textAlign="right">
+                    {count}
+                  </Text>
+                </Flex>
+              );
+            })}
+          </Stack>
+
+          <Stack gap={0}>
+            {data.reviews.map((review) => (
+              <Stack
+                key={review.id}
+                gap={1}
+                py={3}
+                borderTopWidth="1px"
+                borderColor="gray.100"
+              >
+                <Flex justify="space-between" align="center">
+                  <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+                    {review.studentName}
+                  </Text>
+                  <HStack gap={1.5}>
+                    <Stars rating={review.rating} size={12} />
+                    <Text fontSize="xs" color="gray.600">
+                      {review.rating}
+                    </Text>
+                  </HStack>
+                </Flex>
+                <Text fontSize="xs" color="gray.400">
+                  {new Date(review.updatedAt).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </Text>
+                {review.comment ? (
+                  <Text fontSize="sm" color="gray.600">
+                    {review.comment}
+                  </Text>
+                ) : null}
+              </Stack>
+            ))}
+          </Stack>
+
+          {data.page < data.totalPages ? (
+            <Button
+              variant="outline"
+              size="sm"
+              rounded="md"
+              fontWeight="medium"
+              loading={loadingMore}
+              onClick={loadMore}
+            >
+              Load more
+            </Button>
+          ) : null}
+        </Stack>
+      )}
     </Box>
   );
 }
@@ -439,7 +617,7 @@ function CourseDetailContent() {
                 ))}
           </Stack>
 
-          <Box w="320px" flexShrink={0}>
+          <Stack w="320px" flexShrink={0} gap={5}>
             {loading ? (
               <Box
                 bg="white"
@@ -461,7 +639,8 @@ function CourseDetailContent() {
                 completionRate={course?.completionRate ?? 0}
               />
             )}
-          </Box>
+            {courseId ? <CourseReviewsSection courseId={courseId} /> : null}
+          </Stack>
         </Flex>
       </Box>
 
