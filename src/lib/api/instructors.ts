@@ -81,6 +81,9 @@ export interface InstructorReview {
   studentName: string;
   rating: number;
   comment: string | null;
+  /** The course the student reviewed (null for reviews logged without one). */
+  courseId: string | null;
+  courseTitle: string | null;
   createdAt: string;
 }
 

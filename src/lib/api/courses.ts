@@ -327,3 +327,37 @@ export async function publishCourse(
     method: "POST",
   });
 }
+
+export interface CourseReview {
+  id: string;
+  studentName: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CourseReviewsData {
+  /** Mean rating to 1 decimal, null when the course has no reviews. */
+  average: number | null;
+  total: number;
+  /** Review count per star (half stars count toward the star below). */
+  breakdown: Record<"1" | "2" | "3" | "4" | "5", number>;
+  reviews: CourseReview[];
+  page: number;
+  totalPages: number;
+}
+
+export async function listCourseReviews(
+  courseId: string,
+  params: { page?: number; limit?: number } = {},
+): Promise<ApiResult<CourseReviewsData>> {
+  const qs = new URLSearchParams();
+  if (params.page) qs.append("page", String(params.page));
+  if (params.limit) qs.append("limit", String(params.limit));
+  const query = qs.toString();
+  return apiClient<CourseReviewsData>(
+    `/courses/${courseId}/reviews${query ? `?${query}` : ""}`,
+    { method: "GET" },
+  );
+}
