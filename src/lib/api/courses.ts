@@ -334,6 +334,15 @@ export async function deleteCourse(
   });
 }
 
+/** New draft copy of the course (curriculum included), owned by the caller. */
+export async function duplicateCourse(
+  courseId: string,
+): Promise<ApiResult<ApiCourse>> {
+  return apiClient<ApiCourse>(`/courses/${courseId}/duplicate`, {
+    method: "POST",
+  });
+}
+
 export async function publishCourse(
   courseId: string,
 ): Promise<ApiResult<ApiCourse>> {

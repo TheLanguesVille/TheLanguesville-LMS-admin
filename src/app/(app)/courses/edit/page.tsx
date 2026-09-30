@@ -19,7 +19,14 @@ import {
 } from "@/components/course-builder/lesson-editor";
 import { coursePaths } from "@/lib/routes";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { type ApiCourse, getCourse, updateCourse } from "@/lib/api/courses";
+import {
+  type ApiCourse,
+  duplicateCourse,
+  getCourse,
+  updateCourse,
+} from "@/lib/api/courses";
+import { ConfirmModal } from "@/components/shared/confirm-modal";
+import { usePermissions } from "@/lib/hooks/use-permissions";
 
 function mapCourseToDraft(course: ApiCourse): CourseDraft {
   return {
@@ -78,6 +85,39 @@ function EditFlow({
 
   const [saving, setSaving] = useState(false);
   const [savingLesson, setSavingLesson] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
+  const { has } = usePermissions();
+  const onDuplicate = has("courses.edit")
+    ? () => setShowDuplicate(true)
+    : undefined;
+
+  const handleConfirmDuplicate = async () => {
+    const result = await duplicateCourse(courseId);
+    setShowDuplicate(false);
+    if (result.success) {
+      toast.success("Course duplicated — you're now editing the copy");
+      router.push(coursePaths.edit(result.data._id));
+    } else {
+      toast.error(result.message || "Failed to duplicate course");
+    }
+  };
+
+  const duplicateModal = showDuplicate ? (
+    <ConfirmModal
+      tone="info"
+      title="Duplicate this course?"
+      body={
+        <>
+            A new draft copy of <b>{course.title}</b> will be created from its
+            last saved version — save any changes on this screen first.
+            Students, reviews and assignments stay with the original.
+        </>
+      }
+      confirmLabel="Duplicate course"
+      onConfirm={handleConfirmDuplicate}
+      onClose={() => setShowDuplicate(false)}
+    />
+  ) : null;
 
   useEffect(() => {
     if (openModuleId && openLessonId) {
@@ -147,49 +187,61 @@ function EditFlow({
       setEditingLesson(null);
     };
     return (
-      <EditCourseShell
-        courseTitle={course.title}
-        courseId={courseId}
-        primaryLabel="Save lesson"
-        primaryDisabled={savingLesson}
-        primaryLoading={savingLesson}
-        onPrimary={finishLesson}
-        hidePrevious
-      >
-        <LessonEditor mod={mod} lesson={lesson} onDone={finishLesson} />
-      </EditCourseShell>
+      <>
+        {duplicateModal}
+        <EditCourseShell
+          courseTitle={course.title}
+          courseId={courseId}
+          onDuplicate={onDuplicate}
+          primaryLabel="Save lesson"
+          primaryDisabled={savingLesson}
+          primaryLoading={savingLesson}
+          onPrimary={finishLesson}
+          hidePrevious
+        >
+          <LessonEditor mod={mod} lesson={lesson} onDone={finishLesson} />
+        </EditCourseShell>
+      </>
     );
   }
 
   if (step === 1) {
     return (
-      <EditCourseShell
-        courseTitle={course.title}
-        courseId={courseId}
-        primaryLabel="Next: Curriculum"
-        primaryDisabled={!isSetupComplete || saving}
-        primaryLoading={saving}
-        onPrimary={handleSaveSetup}
-        hidePrevious
-      >
-        <CourseSetupStep />
-      </EditCourseShell>
+      <>
+        {duplicateModal}
+        <EditCourseShell
+          courseTitle={course.title}
+          courseId={courseId}
+          onDuplicate={onDuplicate}
+          primaryLabel="Next: Curriculum"
+          primaryDisabled={!isSetupComplete || saving}
+          primaryLoading={saving}
+          onPrimary={handleSaveSetup}
+          hidePrevious
+        >
+          <CourseSetupStep />
+        </EditCourseShell>
+      </>
     );
   }
 
   // Step 2 — curriculum
   return (
-    <EditCourseShell
-      courseTitle={course.title}
-      courseId={courseId}
-      primaryLabel="Save changes"
-      primaryDisabled={saving}
-      primaryLoading={saving}
-      onPrimary={handleFinish}
-      onPrevious={() => setStep(1)}
-    >
-      <CurriculumStep />
-    </EditCourseShell>
+    <>
+      {duplicateModal}
+      <EditCourseShell
+        courseTitle={course.title}
+        courseId={courseId}
+        onDuplicate={onDuplicate}
+        primaryLabel="Save changes"
+        primaryDisabled={saving}
+        primaryLoading={saving}
+        onPrimary={handleFinish}
+        onPrevious={() => setStep(1)}
+      >
+        <CurriculumStep />
+      </EditCourseShell>
+    </>
   );
 }
 
@@ -208,6 +260,10 @@ function EditCoursePageInner() {
       return;
     }
     async function load() {
+      // Duplicating navigates to the copy on this same page — reset so the
+      // builder remounts with the new course instead of the old draft.
+      setLoading(true);
+      setCourse(null);
       const result = await getCourse(courseId);
       if (result.success) {
         setCourse(result.data);
@@ -250,6 +306,7 @@ function EditCoursePageInner() {
 
   return (
     <CourseBuilderProvider
+      key={course._id}
       initialDraft={seedDraft}
       initialCourseId={courseId}
       initialStep={2}

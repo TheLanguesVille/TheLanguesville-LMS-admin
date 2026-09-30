@@ -5,6 +5,7 @@ import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { UserCircle2, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAdmin } from "@/lib/hooks/use-admin";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 
 /** Any badge state the assignment screens can render. */
 type BadgeStatus =
@@ -17,7 +18,7 @@ type BadgeStatus =
   | "graded"
   | "pending";
 
-/** Top bar with just the user chip (no page title). */
+/** Top bar with the notification bell + user chip (no page title). */
 export function PageTopBar() {
   const { admin } = useAdmin();
   const name = admin ? `${admin.firstName} ${admin.lastName}`.trim() : "—";
@@ -34,16 +35,20 @@ export function PageTopBar() {
       top={0}
       zIndex={10}
     >
-      <HStack gap={3}>
-        <UserCircle2 size={32} color="#9CA3AF" strokeWidth={1.5} />
-        <Stack gap={0} lineHeight="1.2">
-          <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-            {name}
-          </Text>
-          <Text fontSize="xs" color="gray.500">
-            {role}
-          </Text>
-        </Stack>
+      <HStack gap={5}>
+        <NotificationBell />
+        <Box w="1px" h="28px" bg="gray.200" />
+        <HStack gap={3}>
+          <UserCircle2 size={32} color="#9CA3AF" strokeWidth={1.5} />
+          <Stack gap={0} lineHeight="1.2">
+            <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+              {name}
+            </Text>
+            <Text fontSize="xs" color="gray.500">
+              {role}
+            </Text>
+          </Stack>
+        </HStack>
       </HStack>
     </Flex>
   );

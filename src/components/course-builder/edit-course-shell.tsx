@@ -8,7 +8,7 @@ import {
   Heading,
   Text,
 } from "@chakra-ui/react";
-import { CheckCircle2, ChevronRight } from "lucide-react";
+import { CheckCircle2, ChevronRight, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { coursePaths } from "@/lib/routes";
@@ -24,6 +24,8 @@ interface EditCourseShellProps {
   onPrimary?: () => void;
   onPrevious?: () => void;
   hidePrevious?: boolean;
+  /** Shows a "Duplicate" button in the header when set. */
+  onDuplicate?: () => void;
 }
 
 export function EditCourseShell({
@@ -36,6 +38,7 @@ export function EditCourseShell({
   onPrimary,
   onPrevious,
   hidePrevious = false,
+  onDuplicate,
 }: EditCourseShellProps) {
   const router = useRouter();
 
@@ -88,8 +91,22 @@ export function EditCourseShell({
           Edit Course
         </Heading>
 
-        {/* Cancel + Save */}
+        {/* Duplicate + Cancel + Save */}
         <HStack gap={2}>
+          {onDuplicate ? (
+            <Button
+              variant="outline"
+              rounded="full"
+              h="36px"
+              px={5}
+              fontWeight="medium"
+              fontSize="sm"
+              onClick={onDuplicate}
+            >
+              <Copy size={15} />
+              Duplicate
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             rounded="full"
