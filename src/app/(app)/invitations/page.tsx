@@ -388,7 +388,7 @@ export default function InvitationsPage() {
 
   return (
     <Box>
-      <DashboardHeader title="Invitations" notificationCount={1} loading={adminLoading} user={userChip} />
+      <DashboardHeader title="Invitations" loading={adminLoading} user={userChip} />
 
       {showEmptyState ? (
         <Flex direction="column" align="center" justify="center" py="180px" gap={3} color="gray.400">

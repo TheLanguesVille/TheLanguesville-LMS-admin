@@ -366,7 +366,7 @@ export default function StudentsListPage() {
 
   return (
     <Box>
-      <DashboardHeader title="Students" notificationCount={1} loading={adminLoading} user={userChip} />
+      <DashboardHeader title="Students" loading={adminLoading} user={userChip} />
 
       {showEmptyState ? (
         <Flex direction="column" align="center" justify="center" py="200px" gap={3} color="gray.400">

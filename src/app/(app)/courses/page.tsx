@@ -246,7 +246,6 @@ export default function CoursesPage() {
     <Box>
       <DashboardHeader
         title="Courses"
-        notificationCount={3}
         loading={adminLoading}
         user={
           admin

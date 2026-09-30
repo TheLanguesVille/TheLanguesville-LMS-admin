@@ -115,7 +115,6 @@ export default function DashboardPage() {
     <Box>
       <DashboardHeader
         title="Dashboard"
-        notificationCount={3}
         loading={adminLoading}
         user={
           admin

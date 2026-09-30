@@ -128,7 +128,7 @@ export default function InstructorsListPage() {
 
   return (
     <Box>
-      <DashboardHeader title="Instructors" notificationCount={1} loading={adminLoading} user={userChip} />
+      <DashboardHeader title="Instructors" loading={adminLoading} user={userChip} />
 
       {showEmptyState ? (
         <Flex direction="column" align="center" justify="center" py="180px" gap={3} color="gray.400">

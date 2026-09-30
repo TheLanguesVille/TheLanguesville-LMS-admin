@@ -218,7 +218,7 @@ export default function AssignmentListPage() {
   if (!loading && !hasAny && !search && activeTab === "all" && items.length === 0) {
     return (
       <Box>
-        <DashboardHeader title="Assignment" notificationCount={1} loading={adminLoading} user={userChip} />
+        <DashboardHeader title="Assignment" loading={adminLoading} user={userChip} />
         <Flex direction="column" align="center" justify="center" py="160px" gap={4}>
           <Box color="gray.300">
             <FileText size={44} />
@@ -245,7 +245,7 @@ export default function AssignmentListPage() {
 
   return (
     <Box>
-      <DashboardHeader title="Assignment" notificationCount={1} loading={adminLoading} user={userChip} />
+      <DashboardHeader title="Assignment" loading={adminLoading} user={userChip} />
 
       <Box px={8} py={6}>
         <Stack gap={6}>

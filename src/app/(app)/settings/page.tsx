@@ -73,7 +73,6 @@ function SettingsContent() {
     <Box>
       <DashboardHeader
         title="Settings"
-        notificationCount={1}
         loading={adminLoading}
         user={
           admin

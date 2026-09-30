@@ -2,7 +2,7 @@
 
 import { roleLabel } from "@/lib/api/auth";
 import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
-import { Bell, UserCircle2, type LucideIcon } from "lucide-react";
+import { UserCircle2, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAdmin } from "@/lib/hooks/use-admin";
 
@@ -17,8 +17,8 @@ type BadgeStatus =
   | "graded"
   | "pending";
 
-/** Top bar with just the notification bell + user chip (no page title). */
-export function PageTopBar({ notificationCount = 1 }: { notificationCount?: number }) {
+/** Top bar with just the user chip (no page title). */
+export function PageTopBar() {
   const { admin } = useAdmin();
   const name = admin ? `${admin.firstName} ${admin.lastName}`.trim() : "—";
   const role = roleLabel(admin?.role);
@@ -34,35 +34,16 @@ export function PageTopBar({ notificationCount = 1 }: { notificationCount?: numb
       top={0}
       zIndex={10}
     >
-      <HStack gap={5}>
-        <Box position="relative">
-          <Bell size={22} color="#374151" />
-          {notificationCount > 0 ? (
-            <Box
-              position="absolute"
-              top="-2px"
-              right="-2px"
-              w="9px"
-              h="9px"
-              rounded="full"
-              bg="#EF4444"
-              borderWidth="2px"
-              borderColor="#F9FAFB"
-            />
-          ) : null}
-        </Box>
-        <Box w="1px" h="28px" bg="gray.200" />
-        <HStack gap={3}>
-          <UserCircle2 size={32} color="#9CA3AF" strokeWidth={1.5} />
-          <Stack gap={0} lineHeight="1.2">
-            <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-              {name}
-            </Text>
-            <Text fontSize="xs" color="gray.500">
-              {role}
-            </Text>
-          </Stack>
-        </HStack>
+      <HStack gap={3}>
+        <UserCircle2 size={32} color="#9CA3AF" strokeWidth={1.5} />
+        <Stack gap={0} lineHeight="1.2">
+          <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+            {name}
+          </Text>
+          <Text fontSize="xs" color="gray.500">
+            {role}
+          </Text>
+        </Stack>
       </HStack>
     </Flex>
   );

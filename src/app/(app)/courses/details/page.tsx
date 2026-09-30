@@ -27,12 +27,15 @@ import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { useAdmin } from "@/lib/hooks/use-admin";
-import { coursePaths } from "@/lib/routes";
+import { usePermissions } from "@/lib/hooks/use-permissions";
+import { coursePaths, studentPaths } from "@/lib/routes";
 import {
   type ApiCourse,
   type ApiModuleDetail,
+  type CourseCohortData,
   type CourseReviewsData,
   getCourse,
+  getCourseCohort,
   listCourseReviews,
   deleteCourse,
   publishCourse,
@@ -143,46 +146,143 @@ function ModuleRow({
   );
 }
 
-function CohortProgressSection({ completionRate }: { completionRate: number }) {
-  const mockStudents = [
-    { name: "Margot B.", progress: completionRate },
-    { name: "Theo D.", progress: completionRate },
-    { name: "Camille M.", progress: completionRate },
-  ];
+const COHORT_PAGE_SIZE = 8;
+
+/** Per-student completion for everyone enrolled in the course. */
+function CohortProgressSection({ courseId }: { courseId: string }) {
+  const router = useRouter();
+  const { has } = usePermissions();
+  const canViewStudents = has("students.view");
+  const [data, setData] = useState<CourseCohortData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const result = await getCourseCohort(courseId, {
+        page: 1,
+        limit: COHORT_PAGE_SIZE,
+      });
+      if (cancelled) return;
+      if (result.success) setData(result.data);
+      else toast.error(result.message || "Couldn't load cohort progress");
+      setLoading(false);
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [courseId]);
+
+  const loadMore = async () => {
+    if (!data) return;
+    setLoadingMore(true);
+    const result = await getCourseCohort(courseId, {
+      page: data.page + 1,
+      limit: COHORT_PAGE_SIZE,
+    });
+    if (result.success) {
+      setData({
+        ...result.data,
+        students: [...data.students, ...result.data.students],
+      });
+    } else {
+      toast.error(result.message || "Couldn't load cohort progress");
+    }
+    setLoadingMore(false);
+  };
 
   return (
     <Box bg="white" borderWidth="1px" borderColor="gray.200" rounded="xl" p={5}>
-      <Text fontWeight="semibold" fontSize="md" color="gray.900" mb={4}>
-        Cohort Progress
-      </Text>
-      <Stack gap={4}>
-        {mockStudents.map((s) => (
-          <Stack key={s.name} gap={1}>
-            <Text fontSize="sm" color="gray.700">
-              {s.name}
-            </Text>
-            <Flex align="center" gap={3}>
-              <Box flex="1" bg="gray.100" rounded="full" h="8px">
-                <Box
-                  bg="#2E2F6F"
-                  rounded="full"
-                  h="8px"
-                  w={`${s.progress}%`}
-                  transition="width 0.4s"
-                />
-              </Box>
-              <Text
-                fontSize="xs"
-                color="gray.500"
-                minW="36px"
-                textAlign="right"
-              >
-                {Math.round(s.progress)}%
-              </Text>
-            </Flex>
-          </Stack>
-        ))}
-      </Stack>
+      <Flex justify="space-between" align="center" mb={4}>
+        <Text fontWeight="semibold" fontSize="md" color="gray.900">
+          Cohort Progress
+        </Text>
+        {data && data.total > 0 ? (
+          <Text fontSize="xs" color="gray.500">
+            {data.completed}/{data.total} completed
+          </Text>
+        ) : null}
+      </Flex>
+
+      {loading ? (
+        <Stack gap={4}>
+          {[...Array(3)].map((_, i) => (
+            <Stack key={i} gap={1}>
+              <Skeleton height="13px" width="80px" rounded="md" />
+              <Skeleton height="8px" rounded="full" />
+            </Stack>
+          ))}
+        </Stack>
+      ) : !data || data.total === 0 ? (
+        <Text fontSize="sm" color="gray.500">
+          No students enrolled yet.
+        </Text>
+      ) : (
+        <Stack gap={4}>
+          {data.students.map((s) => (
+            <Stack
+              key={s.id}
+              gap={1}
+              cursor={canViewStudents ? "pointer" : undefined}
+              onClick={
+                canViewStudents
+                  ? () => router.push(studentPaths.details(s.id))
+                  : undefined
+              }
+            >
+              <Flex justify="space-between" align="center" gap={2}>
+                <Text
+                  fontSize="sm"
+                  color="gray.700"
+                  truncate
+                  _hover={canViewStudents ? { color: "#2E2F6F" } : undefined}
+                >
+                  {s.name || "Unnamed student"}
+                </Text>
+                {s.status === "completed" ? (
+                  <Text fontSize="xs" color="#16A34A" fontWeight="medium">
+                    Completed
+                  </Text>
+                ) : null}
+              </Flex>
+              <Flex align="center" gap={3}>
+                <Box flex="1" bg="gray.100" rounded="full" h="8px">
+                  <Box
+                    bg="#2E2F6F"
+                    rounded="full"
+                    h="8px"
+                    w={`${s.progress}%`}
+                    transition="width 0.4s"
+                  />
+                </Box>
+                <Text
+                  fontSize="xs"
+                  color="gray.500"
+                  minW="36px"
+                  textAlign="right"
+                >
+                  {s.progress}%
+                </Text>
+              </Flex>
+            </Stack>
+          ))}
+
+          {data.page < data.totalPages ? (
+            <Button
+              variant="outline"
+              size="sm"
+              rounded="md"
+              fontWeight="medium"
+              loading={loadingMore}
+              onClick={loadMore}
+            >
+              Load more
+            </Button>
+          ) : null}
+        </Stack>
+      )}
     </Box>
   );
 }
@@ -438,7 +538,6 @@ function CourseDetailContent() {
     <Box>
       <DashboardHeader
         title="Courses"
-        notificationCount={3}
         loading={adminLoading}
         user={
           admin
@@ -618,27 +717,7 @@ function CourseDetailContent() {
           </Stack>
 
           <Stack w="320px" flexShrink={0} gap={5}>
-            {loading ? (
-              <Box
-                bg="white"
-                borderWidth="1px"
-                borderColor="gray.200"
-                rounded="xl"
-                p={5}
-              >
-                <Skeleton height="18px" width="140px" rounded="md" mb={4} />
-                {[...Array(3)].map((_, i) => (
-                  <Stack key={i} gap={1} mb={4}>
-                    <Skeleton height="13px" width="80px" rounded="md" />
-                    <Skeleton height="8px" rounded="full" />
-                  </Stack>
-                ))}
-              </Box>
-            ) : (
-              <CohortProgressSection
-                completionRate={course?.completionRate ?? 0}
-              />
-            )}
+            {courseId ? <CohortProgressSection courseId={courseId} /> : null}
             {courseId ? <CourseReviewsSection courseId={courseId} /> : null}
           </Stack>
         </Flex>
