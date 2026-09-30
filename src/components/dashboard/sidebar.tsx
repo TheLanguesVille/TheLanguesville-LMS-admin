@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   LogOut,
   Mail,
+  MessagesSquare,
   Settings,
   Star,
   UsersRound,
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 import NextLink from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { UNREAD_CHANGED_EVENT, getUnreadCount } from "@/lib/api/messages";
 import { logout } from "@/lib/api/auth";
 import type { Permission } from "@/lib/api/settings";
 import { usePermissions } from "@/lib/hooks/use-permissions";
@@ -38,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
     requires: "analytics.view",
   },
   { label: "Students", href: "/students", icon: GraduationCap },
+  { label: "Messages", href: "/messages", icon: MessagesSquare },
   { label: "Instructors", href: "/instructors", icon: UsersRound },
   { label: "Invitations", href: "/invitations", icon: Mail },
 ];
@@ -59,9 +63,10 @@ const sharedItemStyles = {
 interface NavLinkProps {
   item: NavItem;
   active: boolean;
+  badge?: number;
 }
 
-function NavLink({ item, active }: NavLinkProps) {
+function NavLink({ item, active, badge }: NavLinkProps) {
   const Icon = item.icon;
   return (
     <NextLink href={item.href} style={{ textDecoration: "none" }}>
@@ -74,16 +79,65 @@ function NavLink({ item, active }: NavLinkProps) {
         transition="background 0.15s"
       >
         <Icon size={18} />
-        <Text>{item.label}</Text>
+        <Text flex="1">{item.label}</Text>
+        {badge ? (
+          <Box
+            minW="20px"
+            h="20px"
+            px={1.5}
+            rounded="full"
+            bg={active ? "white" : "#F97461"}
+            color={active ? "#F97461" : "white"}
+            fontSize="11px"
+            fontWeight="bold"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            aria-label={`${badge} unread`}
+          >
+            {badge > 99 ? "99+" : badge}
+          </Box>
+        ) : null}
       </HStack>
     </NextLink>
   );
+}
+
+/**
+ * Unread message count for the sidebar badge. Refreshed when the route
+ * changes, the window regains focus, or a screen reports it changed — plain
+ * API calls, no polling.
+ */
+function useUnreadMessages(pathname: string | null): number {
+  const [unread, setUnread] = useState(0);
+  const refresh = useCallback(() => {
+    getUnreadCount().then((result) => {
+      if (result.success) setUnread(result.data.unread);
+    });
+  }, []);
+
+  useEffect(() => {
+    const id = setTimeout(refresh, 0);
+    return () => clearTimeout(id);
+  }, [pathname, refresh]);
+
+  useEffect(() => {
+    window.addEventListener(UNREAD_CHANGED_EVENT, refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener(UNREAD_CHANGED_EVENT, refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [refresh]);
+
+  return unread;
 }
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { has, loading: permissionsLoading } = usePermissions();
+  const unreadMessages = useUnreadMessages(pathname);
 
   const handleLogout = () => {
     logout();
@@ -142,7 +196,12 @@ export function Sidebar() {
           than the sidebar, absorbs the overflow on a short viewport. */}
       <Stack gap={1} flex="1" minH={0} overflowY="auto">
         {visibleNavItems.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(item.href)} />
+          <NavLink
+            key={item.href}
+            item={item}
+            active={isActive(item.href)}
+            badge={item.href === "/messages" ? unreadMessages : undefined}
+          />
         ))}
       </Stack>
 

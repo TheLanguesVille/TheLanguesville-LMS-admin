@@ -13,7 +13,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { AlertCircle, ArrowLeft, FileText, Inbox } from "lucide-react";
+import { AlertCircle, ArrowLeft, FileText, Inbox, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -375,6 +375,23 @@ export default function AssignmentDetailPage() {
               </Button>
             ) : (
               <>
+                {assignment.status === "published" ? (
+                  <Button
+                    variant="outline"
+                    rounded="full"
+                    h="40px"
+                    px={5}
+                    fontSize="sm"
+                    fontWeight="medium"
+                    color="#2E2F6F"
+                    borderColor="gray.200"
+                    _hover={{ bg: "#FFF1ED", borderColor: "#F97461", color: "#F97461" }}
+                    onClick={() => router.push(assignmentPaths.edit(assignmentId!))}
+                  >
+                    <Pencil size={15} />
+                    Edit
+                  </Button>
+                ) : null}
                 <Button
                   variant="outline"
                   rounded="full"

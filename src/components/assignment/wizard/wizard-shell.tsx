@@ -18,6 +18,11 @@ interface WizardShellProps {
   onSaveDraft?: () => void;
   showPrevious?: boolean;
   showSaveDraft?: boolean;
+  saveDraftLabel?: string;
+  /** Rendered above the step content (e.g. the "this is live" notice). */
+  banner?: ReactNode;
+  /** Where the close (X) button goes; defaults to the assignment list. */
+  onClose?: () => void;
 }
 
 export function WizardShell({
@@ -31,6 +36,9 @@ export function WizardShell({
   onSaveDraft,
   showPrevious = true,
   showSaveDraft = true,
+  saveDraftLabel = "Save draft",
+  banner,
+  onClose,
 }: WizardShellProps) {
   const router = useRouter();
 
@@ -70,7 +78,7 @@ export function WizardShell({
           variant="outline"
           rounded="full"
           size="sm"
-          onClick={() => router.push(assignmentPaths.list)}
+          onClick={onClose ?? (() => router.push(assignmentPaths.list))}
         >
           <X size={16} />
         </IconButton>
@@ -83,7 +91,10 @@ export function WizardShell({
           <WizardStepRail />
         </Box>
         <Box flex="1" overflowY="auto" px={8} py={8}>
-          <Box maxW="720px">{children}</Box>
+          <Box maxW="720px">
+            {banner}
+            {children}
+          </Box>
         </Box>
       </Flex>
 
@@ -106,7 +117,7 @@ export function WizardShell({
               cursor="pointer"
               _hover={{ color: "gray.900" }}
             >
-              Save draft
+              {saveDraftLabel}
             </Box>
           ) : null}
           {showPrevious ? (

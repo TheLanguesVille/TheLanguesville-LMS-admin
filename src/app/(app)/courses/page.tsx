@@ -26,8 +26,9 @@ import { coursePaths } from "@/lib/routes";
 import {
   type CourseSummary,
   deleteCourse,
-  listCourses,
+  listAllCourses,
 } from "@/lib/api/courses";
+import { Avatar } from "@/components/shared/avatar";
 
 type TabValue = "all" | "published" | "draft";
 
@@ -55,11 +56,18 @@ function CourseRow({
   course,
   onDelete,
   onClick,
+  showOwner,
 }: {
   course: CourseSummary;
   onDelete: (id: string) => void;
   onClick: () => void;
+  /** Admins see every course, so label whose course it is. */
+  showOwner: boolean;
 }) {
+  const owner = course.instructorId
+    ? `${course.instructorId.firstName ?? ""} ${course.instructorId.lastName ?? ""}`.trim() ||
+      course.instructorId.email
+    : null;
   const moduleCount =
     course.moduleCount ?? (course.modules ? course.modules.length : 0);
   const totalLessons =
@@ -146,9 +154,22 @@ function CourseRow({
       </Box>
 
       <Flex justify="space-between" align="center">
-        <Text fontSize="xs" color="gray.400">
-          Updated {timeAgo(course.updatedAt)}
-        </Text>
+        <HStack gap={2} minW={0}>
+          {showOwner && owner ? (
+            <HStack gap={1.5} minW={0} title={`Created by ${owner}`}>
+              <Avatar name={owner} size={20} />
+              <Text fontSize="xs" color="gray.600" fontWeight="medium" lineClamp={1}>
+                {owner}
+              </Text>
+              <Text fontSize="xs" color="gray.300">
+                •
+              </Text>
+            </HStack>
+          ) : null}
+          <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
+            Updated {timeAgo(course.updatedAt)}
+          </Text>
+        </HStack>
         <Box
           as="button"
           onClick={(e: React.MouseEvent) => {
@@ -199,15 +220,16 @@ export default function CoursesPage() {
   );
   const [deleting, setDeleting] = useState(false);
 
+  // Load every visible course once per search (instructors get their own,
+  // admins get all of them) and split into tabs client-side, so the tab
+  // counts are real totals rather than counts of the current page.
   const fetchCourses = useCallback(async () => {
     setCoursesLoading(true);
-    const params: Record<string, string> = {};
-    if (activeTab !== "all") params.status = activeTab;
-    if (search) params.search = search;
-    const result = await listCourses(params);
-    if (result.success) setCourses(result.data.courses);
+    const result = await listAllCourses(search ? { search } : {});
+    if (result.success) setCourses(result.data);
+    else toast.error(result.message || "Couldn't load courses");
     setCoursesLoading(false);
-  }, [activeTab, search]);
+  }, [search]);
 
   useEffect(() => {
     const id = setTimeout(fetchCourses, search ? 300 : 0);
@@ -227,6 +249,12 @@ export default function CoursesPage() {
     }
     setDeleting(false);
   };
+
+  const visibleCourses =
+    activeTab === "all"
+      ? courses
+      : courses.filter((c) => c.status === activeTab);
+  const seesEverything = admin?.role === "admin" || admin?.role === "superadmin";
 
   const allCount = courses.length;
   const publishedCount = courses.filter((c) => c.status === "published").length;
@@ -327,7 +355,7 @@ export default function CoursesPage() {
                 <CourseRowSkeleton key={i} />
               ))}
             </SimpleGrid>
-          ) : courses.length === 0 ? (
+          ) : visibleCourses.length === 0 ? (
             <Flex
               direction="column"
               align="center"
@@ -347,10 +375,11 @@ export default function CoursesPage() {
             </Flex>
           ) : (
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-              {courses.map((course) => (
+              {visibleCourses.map((course) => (
                 <CourseRow
                   key={course._id}
                   course={course}
+                  showOwner={seesEverything}
                   onDelete={(id) =>
                     setPendingDelete(courses.find((c) => c._id === id) ?? null)
                   }

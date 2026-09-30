@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { FormField } from "@/components/onboarding/form-field";
 import { AppButton } from "@/components/ui/app-button";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { listCourses } from "@/lib/api/courses";
+import { listAllCourses } from "@/lib/api/courses";
 import { createInvitation } from "@/lib/api/invitations";
 import { type EnrollmentType, inviteStudent } from "@/lib/api/students";
 import {
@@ -89,10 +89,10 @@ export function InviteStudentModal({
   // Course picker options come from the existing courses list.
   useEffect(() => {
     let active = true;
-    listCourses({ limit: 100 }).then((result) => {
+    listAllCourses().then((result) => {
       if (!active) return;
       if (result.success) {
-        setCourses(result.data.courses.map((c) => ({ id: c._id, title: c.title })));
+        setCourses(result.data.map((c) => ({ id: c._id, title: c.title })));
       } else {
         toast.error(getApiErrorMessage(result, "Couldn't load courses"));
       }

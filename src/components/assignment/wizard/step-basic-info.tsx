@@ -38,12 +38,12 @@ export function StepBasicInfo() {
             <FieldLabel>Description</FieldLabel>
             <TextAreaField
               placeholder="Describe what students needs to do, expectations and any guidelines"
-              maxLength={100}
+              maxLength={1000}
               value={draft.description}
               onChange={(e) => update({ description: e.target.value })}
             />
             <Text fontSize="xs" color="gray.400" textAlign="right" mt={1.5}>
-              {draft.description.length}/100
+              {draft.description.length}/1000
             </Text>
           </Stack>
         </Stack>

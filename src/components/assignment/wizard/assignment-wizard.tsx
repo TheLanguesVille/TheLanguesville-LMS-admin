@@ -1,6 +1,7 @@
 "use client";
 
-import { Skeleton, Stack } from "@chakra-ui/react";
+import { Box, HStack, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { Radio } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -83,11 +84,23 @@ function sliceForStep(
   }
 }
 
+/** Every step's slice in one PATCH, so nothing edited on a skipped step is lost. */
+function fullPayload(
+  draft: AssignmentDraft,
+  placements: PlacementInput[],
+): UpdateAssignmentPayload {
+  return ([1, 2, 3, 4] as WizardStep[]).reduce<UpdateAssignmentPayload>(
+    (acc, s) => ({ ...acc, ...sliceForStep(s, draft, placements) }),
+    {},
+  );
+}
+
 function AssignmentWizardFlow() {
   const router = useRouter();
   const {
     hydrating,
     mode,
+    isPublished,
     draft,
     step,
     setStep,
@@ -127,6 +140,20 @@ function AssignmentWizardFlow() {
     return true;
   };
 
+  /** Persist all steps at once (used before publishing / saving an edit). */
+  const saveEverything = async (): Promise<boolean> => {
+    if (!assignmentId) return false;
+    const result = await updateAssignment(
+      assignmentId,
+      fullPayload(draft, placements),
+    );
+    if (!result.success) {
+      toast.error(getApiErrorMessage(result, "Couldn't save changes"));
+      return false;
+    }
+    return true;
+  };
+
   const handlePrimary = async () => {
     if (saving) return;
     setSaving(true);
@@ -135,6 +162,20 @@ function AssignmentWizardFlow() {
       if (!assignmentId) {
         toast.error("Finish the earlier steps before publishing.");
         setSaving(false);
+        return;
+      }
+      // Steps are only saved on "Proceed", so jumping around with the step
+      // rail or "Previous" could otherwise leave edits unsaved.
+      if (!(await saveEverything())) {
+        setSaving(false);
+        return;
+      }
+      if (isPublished) {
+        setSaving(false);
+        toast.success("Assignment updated", {
+          description: "Students will see your changes right away.",
+        });
+        router.push(assignmentPaths.details(assignmentId));
         return;
       }
       const result = await publishAssignment(assignmentId);
@@ -158,17 +199,24 @@ function AssignmentWizardFlow() {
   const handleSaveDraft = async () => {
     if (saving) return;
     setSaving(true);
-    const ok = await saveCurrentStep();
+    // A live assignment saves every step, so the edit is complete on its own.
+    const ok = isPublished ? await saveEverything() : await saveCurrentStep();
     setSaving(false);
-    if (ok) toast.success("Draft saved");
+    if (ok) toast.success(isPublished ? "Changes saved" : "Draft saved");
   };
 
   const isLast = step === 5;
   const primaryDisabled = isLast ? !canPublish : !canProceed(step);
 
+  const title = isPublished
+    ? "Edit assignment"
+    : mode === "edit"
+      ? "Continue draft"
+      : "New Assignment";
+
   if (hydrating) {
     return (
-      <WizardShell title="Continue draft" showPrevious={false} showSaveDraft={false} primaryDisabled>
+      <WizardShell title={title} showPrevious={false} showSaveDraft={false} primaryDisabled>
         <Stack gap={4}>
           <Skeleton h="28px" w="240px" rounded="md" />
           <Skeleton h="44px" rounded="md" />
@@ -181,8 +229,23 @@ function AssignmentWizardFlow() {
 
   return (
     <WizardShell
-      title={mode === "edit" ? "Continue draft" : "New Assignment"}
-      primaryLabel={isLast ? "Publish" : "Proceed"}
+      title={title}
+      primaryLabel={isLast ? (isPublished ? "Save changes" : "Publish") : "Proceed"}
+      saveDraftLabel={isPublished ? "Save changes" : "Save draft"}
+      banner={
+        isPublished ? (
+          <LiveEditBanner
+            onViewDetails={() =>
+              assignmentId && router.push(assignmentPaths.details(assignmentId))
+            }
+          />
+        ) : null
+      }
+      onClose={
+        isPublished && assignmentId
+          ? () => router.push(assignmentPaths.details(assignmentId))
+          : undefined
+      }
       primaryDisabled={primaryDisabled}
       primaryLoading={saving}
       onPrimary={handlePrimary}
@@ -201,9 +264,62 @@ function AssignmentWizardFlow() {
   );
 }
 
+/** Shown above every step while editing an assignment students can already see. */
+function LiveEditBanner({ onViewDetails }: { onViewDetails: () => void }) {
+  return (
+    <HStack
+      gap={3}
+      align="flex-start"
+      bg="#FFF1ED"
+      borderWidth="1px"
+      borderColor="#FBD5CC"
+      rounded="xl"
+      px={4}
+      py={3}
+      mb={6}
+    >
+      <Box
+        w="28px"
+        h="28px"
+        rounded="full"
+        bg="#F97461"
+        color="white"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        flexShrink={0}
+      >
+        <Radio size={15} />
+      </Box>
+      <Stack gap={0.5} flex="1">
+        <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+          This assignment is live
+        </Text>
+        <Text fontSize="sm" color="gray.600">
+          Students can already see it. Changes apply as soon as you save —
+          existing submissions and grades are kept.
+        </Text>
+      </Stack>
+      <Box
+        as="button"
+        onClick={onViewDetails}
+        fontSize="sm"
+        fontWeight="medium"
+        color="#2E2F6F"
+        whiteSpace="nowrap"
+        cursor="pointer"
+        _hover={{ textDecoration: "underline" }}
+      >
+        View details
+      </Box>
+    </HStack>
+  );
+}
+
 /**
  * The 5-step assignment builder. Pass `initialAssignment` to resume a saved
- * draft (edits PATCH that draft); omit it to create a new one.
+ * draft or edit a published assignment (edits PATCH it; a published one stays
+ * published); omit it to create a new one.
  */
 export function AssignmentWizard({
   initialAssignment,

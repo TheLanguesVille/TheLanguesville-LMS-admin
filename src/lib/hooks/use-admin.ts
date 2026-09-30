@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { type AdminProfile, getMe } from "@/lib/api/auth";
-import { PROFILE_CACHE_KEY as CACHE_KEY } from "@/lib/auth/session";
+import { PROFILE_CACHE_KEY as CACHE_KEY, getToken } from "@/lib/auth/session";
 
+// The cached profile is tagged with the token it was fetched for, so a
+// different sign-in (or an expired session followed by a new login) can never
+// render the previous account's name and role.
 function readCache(): AdminProfile | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    return raw ? (JSON.parse(raw) as AdminProfile) : null;
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as { token?: string; profile?: AdminProfile };
+    const token = getToken();
+    return token && cached.token === token && cached.profile
+      ? cached.profile
+      : null;
   } catch {
     return null;
   }
@@ -15,7 +23,10 @@ function readCache(): AdminProfile | null {
 
 function writeCache(profile: AdminProfile) {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(profile));
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({ token: getToken(), profile }),
+    );
   } catch {}
 }
 

@@ -22,10 +22,12 @@ function EditAssignmentPageInner() {
       if (!active) return;
       if (!result.success) {
         setLoadFailed(true);
-      } else if (result.data.status !== "draft") {
-        // Only drafts are resumable; published work lives on its details page.
+      } else if (result.data.status === "archived") {
+        // Archived work is read-only; show it on its details page.
         router.replace(assignmentPaths.details(assignmentId));
       } else {
+        // Drafts resume in the builder; published assignments open in it too,
+        // in "edit" mode (saving keeps them published).
         setAssignment(result.data);
       }
     });
@@ -38,7 +40,7 @@ function EditAssignmentPageInner() {
     return (
       <Flex direction="column" align="center" justify="center" py="160px" gap={3}>
         <Text fontWeight="semibold" color="gray.900">
-          Draft not found
+          Assignment not found
         </Text>
         <Button
           variant="outline"
@@ -55,7 +57,7 @@ function EditAssignmentPageInner() {
   if (!assignment) {
     return (
       <WizardShell
-        title="Continue draft"
+        title="Loading assignment"
         showPrevious={false}
         showSaveDraft={false}
         primaryDisabled
