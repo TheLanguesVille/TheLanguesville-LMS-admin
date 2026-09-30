@@ -1,19 +1,26 @@
 "use client";
 
 import { Box, Button, Flex, Portal, Stack, Text } from "@chakra-ui/react";
-import { AlertTriangle, CircleAlert, CircleCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CircleAlert,
+  CircleCheck,
+  Copy,
+  type LucideIcon,
+} from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { AppButton } from "@/components/ui/app-button";
 
-type ConfirmTone = "warning" | "danger" | "success";
+type ConfirmTone = "warning" | "danger" | "success" | "info";
 
 const TONES: Record<
   ConfirmTone,
-  { icon: typeof AlertTriangle; color: string; bg: string }
+  { icon: LucideIcon; color: string; bg: string }
 > = {
   warning: { icon: AlertTriangle, color: "#D97706", bg: "#FEF3C7" },
   danger: { icon: CircleAlert, color: "#DC2626", bg: "#FEE2E2" },
   success: { icon: CircleCheck, color: "#16A34A", bg: "#DCFCE7" },
+  info: { icon: Copy, color: "#2E2F6F", bg: "#E8E9F5" },
 };
 
 interface ConfirmModalProps {

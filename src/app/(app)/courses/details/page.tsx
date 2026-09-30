@@ -20,12 +20,14 @@ import {
   ChevronDown,
   ChevronRight,
   ArrowLeft,
+  Copy,
   Star,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { ConfirmModal } from "@/components/shared/confirm-modal";
 import { useAdmin } from "@/lib/hooks/use-admin";
 import { usePermissions } from "@/lib/hooks/use-permissions";
 import { coursePaths, studentPaths } from "@/lib/routes";
@@ -38,6 +40,7 @@ import {
   getCourseCohort,
   listCourseReviews,
   deleteCourse,
+  duplicateCourse,
   publishCourse,
   unpublishCourse,
 } from "@/lib/api/courses";
@@ -472,6 +475,9 @@ function CourseDetailContent() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showUnpublishModal, setShowUnpublishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const { has } = usePermissions();
+  const canEdit = has("courses.edit");
 
   useEffect(() => {
     if (!courseId) {
@@ -502,6 +508,17 @@ function CourseDetailContent() {
     } else {
       toast.error(result.message || "Failed to delete course");
       setActionLoading(false);
+    }
+  };
+
+  const handleConfirmDuplicate = async () => {
+    const result = await duplicateCourse(courseId);
+    setShowDuplicateModal(false);
+    if (result.success) {
+      toast.success("Course duplicated — you're now viewing the copy");
+      router.push(coursePaths.details(result.data._id));
+    } else {
+      toast.error(result.message || "Failed to duplicate course");
     }
   };
 
@@ -576,6 +593,21 @@ function CourseDetailContent() {
               >
                 Delete
               </Button>
+              {canEdit ? (
+                <Button
+                  variant="outline"
+                  fontWeight="semibold"
+                  fontSize="sm"
+                  h="36px"
+                  px={4}
+                  rounded="md"
+                  disabled={actionLoading}
+                  onClick={() => setShowDuplicateModal(true)}
+                >
+                  <Copy size={15} />
+                  Duplicate
+                </Button>
+              ) : null}
               <Button
                 variant="outline"
                 fontWeight="semibold"
@@ -722,6 +754,23 @@ function CourseDetailContent() {
           </Stack>
         </Flex>
       </Box>
+
+      {showDuplicateModal && course ? (
+        <ConfirmModal
+          tone="info"
+          title="Duplicate this course?"
+          body={
+            <>
+              A new draft copy of <b>{course.title}</b> will be created with
+              its details, modules, lessons and content. Students, reviews
+              and assignments stay with the original.
+            </>
+          }
+          confirmLabel="Duplicate course"
+          onConfirm={handleConfirmDuplicate}
+          onClose={() => setShowDuplicateModal(false)}
+        />
+      ) : null}
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (
