@@ -24,7 +24,7 @@ function formatTime(t: string): string {
 }
 
 export function StepReview() {
-  const { draft, setStep, courses } = useWizard();
+  const { draft, setStep, courses, isPublished } = useWizard();
 
   const selected = new Set(draft.selectedLessonIds);
   let courseName = "Not set";
@@ -72,8 +72,12 @@ export function StepReview() {
   return (
     <Stack gap={6}>
       <StepHeading
-        title="Review & publish"
-        subtitle="Double-check everything before sending to students."
+        title={isPublished ? "Review changes" : "Review & publish"}
+        subtitle={
+          isPublished
+            ? "Check everything, then save — students see the update right away."
+            : "Double-check everything before sending to students."
+        }
       />
 
       <Stack gap={0}>

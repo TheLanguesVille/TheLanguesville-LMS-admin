@@ -7,12 +7,10 @@ import {
   Grid,
   HStack,
   Heading,
-  Input,
   Portal,
   Skeleton,
   Stack,
   Text,
-  Textarea,
 } from "@chakra-ui/react";
 import {
   ArrowLeft,
@@ -24,6 +22,7 @@ import {
   type LucideIcon,
   Mail,
   Medal,
+  MessagesSquare,
   Star,
   Trophy,
   Upload,
@@ -44,9 +43,8 @@ import {
   listStudentActivity,
   listStudentGrades,
   relativeTime,
-  sendStudentMessage,
 } from "@/lib/api/students";
-import { studentPaths } from "@/lib/routes";
+import { messagePaths, studentPaths } from "@/lib/routes";
 
 const LEVEL_BADGE = { bg: "#EEF0FB", color: "#4338CA" };
 const GRADES_PAGE_SIZE = 10;
@@ -91,94 +89,6 @@ function GradeRow({ grade }: { grade: GradeItem }) {
         </Text>
       </Text>
     </Flex>
-  );
-}
-
-function SendMessageModal({
-  studentId,
-  name,
-  email,
-  avatarUrl,
-  studentInitials,
-  onClose,
-}: {
-  studentId: string;
-  name: string;
-  email: string;
-  avatarUrl: string | null;
-  studentInitials: string;
-  onClose: () => void;
-}) {
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const canSend =
-    !sending && subject.trim() !== "" && message.trim() !== "";
-
-  const send = async () => {
-    if (!canSend) return;
-    setSending(true);
-    const result = await sendStudentMessage(studentId, {
-      subject: subject.trim(),
-      body: message.trim(),
-    });
-    if (result.success) {
-      onClose();
-      toast.success("Message Delivered", {
-        description:
-          result.message ?? "Your message has been delivered successfully.",
-      });
-    } else {
-      setSending(false);
-      toast.error(getApiErrorMessage(result, "Couldn't send the message"));
-    }
-  };
-
-  return (
-    <Portal>
-      <Box position="fixed" inset={0} bg="blackAlpha.600" zIndex={200} display="flex" alignItems="center" justifyContent="center" px={4} onClick={onClose}>
-        <Box bg="white" rounded="2xl" p={7} w="full" maxW="460px" boxShadow="2xl" onClick={(e) => e.stopPropagation()}>
-          <HStack gap={3} mb={5}>
-            <Avatar name={name} src={avatarUrl} initials={studentInitials} size={44} />
-            <Stack gap={0}>
-              <Text fontWeight="bold" color="gray.900">
-                {name}
-              </Text>
-              <Text fontSize="sm" color="gray.500">
-                {email}
-              </Text>
-            </Stack>
-          </HStack>
-
-          <Stack gap={4}>
-            <Stack gap={0}>
-              <Text fontSize="sm" color="gray.700" mb={2}>
-                Subject
-              </Text>
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} placeholder="A clear, short subject line" h="48px" fontSize="sm" borderColor="gray.200" rounded="lg" _placeholder={{ color: "gray.400" }} _focus={{ borderColor: "#2E2F6F", outline: "none", boxShadow: "none" }} />
-            </Stack>
-            <Stack gap={0}>
-              <Text fontSize="sm" color="gray.700" mb={2}>
-                Message
-              </Text>
-              <Textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} placeholder="Write your message" minH="130px" resize="none" fontSize="sm" borderColor="gray.200" rounded="lg" _placeholder={{ color: "gray.400" }} _focus={{ borderColor: "#2E2F6F", outline: "none", boxShadow: "none" }} />
-              <Text fontSize="xs" color="gray.400" textAlign="right" mt={1.5}>
-                {message.length}/2000
-              </Text>
-            </Stack>
-
-            <Stack gap={3}>
-              <Button rounded="full" h="48px" fontSize="sm" fontWeight="semibold" bg={canSend ? "#2E2F6F" : "#E5E7EB"} color={canSend ? "white" : "#9CA3AF"} _hover={canSend ? { bg: "#262760" } : { bg: "#E5E7EB" }} cursor={canSend ? "pointer" : "not-allowed"} disabled={!canSend} loading={sending} onClick={send}>
-                Send message
-              </Button>
-              <Button variant="outline" rounded="full" h="48px" fontSize="sm" fontWeight="medium" onClick={onClose}>
-                Cancel
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
-      </Box>
-    </Portal>
   );
 }
 
@@ -319,7 +229,6 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [messageOpen, setMessageOpen] = useState(false);
   const [gradesOpen, setGradesOpen] = useState(false);
 
   const [activity, setActivity] = useState<ActivityItem[]>([]);
@@ -432,7 +341,8 @@ export default function StudentDetailPage() {
               </Text>
             </HStack>
           </Box>
-          <Button bg="#2E2F6F" color="white" rounded="full" h="40px" px={6} fontSize="sm" fontWeight="medium" _hover={{ bg: "#262760" }} onClick={() => setMessageOpen(true)}>
+          <Button bg="#2E2F6F" color="white" rounded="full" h="40px" px={6} fontSize="sm" fontWeight="medium" _hover={{ bg: "#262760" }} onClick={() => router.push(messagePaths.withStudent(student.id))}>
+            <MessagesSquare size={16} />
             Message
           </Button>
         </Flex>
@@ -572,16 +482,7 @@ export default function StudentDetailPage() {
         </Grid>
       </Box>
 
-      {messageOpen ? (
-        <SendMessageModal
-          studentId={student.id}
-          name={student.name}
-          email={student.email}
-          avatarUrl={student.avatarUrl}
-          studentInitials={student.initials}
-          onClose={() => setMessageOpen(false)}
-        />
-      ) : null}
+      
       {gradesOpen ? (
         <AllGradesModal studentId={student.id} onClose={() => setGradesOpen(false)} />
       ) : null}

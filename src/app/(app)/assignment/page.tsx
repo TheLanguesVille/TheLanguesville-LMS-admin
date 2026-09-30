@@ -2,7 +2,7 @@
 
 import { roleLabel } from "@/lib/api/auth";
 import { Box, Flex, Grid, HStack, Skeleton, Stack, Text } from "@chakra-ui/react";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -23,7 +23,7 @@ import {
 
 type TabValue = "all" | "active" | "overdue" | "draft";
 
-const COLS = "1.6fr 1.4fr 0.9fr 1fr 0.9fr 0.7fr";
+const COLS = "1.6fr 1.4fr 0.9fr 1fr 0.9fr 0.7fr 92px";
 const PAGE_SIZE = 10;
 
 function formatDue(dueAt: string | null): string {
@@ -76,12 +76,53 @@ function HeaderCell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Row-level "Edit" call to action — opens the assignment in the builder. */
+function EditButton({
+  title,
+  onClick,
+}: {
+  title: string;
+  onClick: () => void;
+}) {
+  return (
+    <HStack
+      as="button"
+      aria-label={`Edit ${title}`}
+      title="Edit assignment"
+      onClick={(e: React.MouseEvent) => {
+        // The row itself opens the details page.
+        e.stopPropagation();
+        onClick();
+      }}
+      gap={1.5}
+      px={3}
+      h="32px"
+      rounded="full"
+      borderWidth="1px"
+      borderColor="gray.200"
+      bg="white"
+      color="#2E2F6F"
+      fontSize="xs"
+      fontWeight="semibold"
+      cursor="pointer"
+      transition="all 0.15s"
+      _hover={{ bg: "#FFF1ED", borderColor: "#F97461", color: "#F97461" }}
+      _focusVisible={{ outline: "2px solid #F97461", outlineOffset: "2px" }}
+    >
+      <Pencil size={13} />
+      <Text>Edit</Text>
+    </HStack>
+  );
+}
+
 function AssignmentRow({
   assignment,
   onClick,
+  onEdit,
 }: {
   assignment: AssignmentListItem;
   onClick: () => void;
+  onEdit: () => void;
 }) {
   return (
     <Grid
@@ -121,6 +162,11 @@ function AssignmentRow({
       <Text fontSize="sm" color="gray.700">
         {assignment.submittedCount}/{assignment.assignedCount}
       </Text>
+      <Flex justify="flex-end">
+        {assignment.status === "archived" ? null : (
+          <EditButton title={assignment.title} onClick={onEdit} />
+        )}
+      </Flex>
     </Grid>
   );
 }
@@ -137,6 +183,7 @@ function RowSkeleton() {
       <Skeleton h="14px" w="60%" rounded="md" />
       <Skeleton h="20px" w="64px" rounded="full" />
       <Skeleton h="14px" w="40%" rounded="md" />
+      <Skeleton h="32px" w="68px" rounded="full" justifySelf="flex-end" />
     </Grid>
   );
 }
@@ -324,6 +371,7 @@ export default function AssignmentListPage() {
               <HeaderCell>Due date</HeaderCell>
               <HeaderCell>Status</HeaderCell>
               <HeaderCell>Submitted</HeaderCell>
+              <Box />
             </Grid>
 
             {loading ? (
@@ -360,6 +408,7 @@ export default function AssignmentListPage() {
                         : assignmentPaths.details(a.id),
                     )
                   }
+                  onEdit={() => router.push(assignmentPaths.edit(a.id))}
                 />
               ))
             )}

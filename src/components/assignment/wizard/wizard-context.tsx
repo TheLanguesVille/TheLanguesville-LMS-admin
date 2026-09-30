@@ -18,7 +18,7 @@ import type {
   ResourceFile,
   SubmissionType,
 } from "@/lib/api/assignments";
-import { type ApiCourse, getCourse, listCourses } from "@/lib/api/courses";
+import { type ApiCourse, getCourse, listAllCourses } from "@/lib/api/courses";
 
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
 
@@ -107,6 +107,8 @@ interface WizardContextValue {
   hydrating: boolean;
   /** "edit" when continuing a saved draft rather than starting fresh. */
   mode: "new" | "edit";
+  /** Editing an assignment that's already published (it stays published). */
+  isPublished: boolean;
   draft: AssignmentDraft;
   update: (patch: Partial<AssignmentDraft>) => void;
   step: WizardStep;
@@ -299,9 +301,9 @@ export function WizardProvider({
   useEffect(() => {
     let active = true;
     (async () => {
-      const list = await listCourses({ limit: 100 });
+      const list = await listAllCourses();
       let tree: TreeCourse[] = list.success
-        ? list.data.courses.map((c) => ({
+        ? list.data.map((c) => ({
             id: c._id,
             title: c.title,
             level: c.level,
@@ -342,12 +344,15 @@ export function WizardProvider({
           expandPlacements(initialAssignment.placements, tree),
         );
         // Open on the first unfinished step, or Review if it's ready to publish.
+        // A published assignment is being edited, so start from the top.
         const firstIncomplete = ([1, 2, 3] as WizardStep[]).find(
           (s) => !isStepComplete(resumed, s),
         );
         if (!active) return;
         setDraft(resumed);
-        setStep(firstIncomplete ?? 5);
+        setStep(
+          initialAssignment.status === "published" ? 1 : (firstIncomplete ?? 5),
+        );
       }
 
       if (!active) return;
@@ -413,6 +418,7 @@ export function WizardProvider({
     return {
       hydrating,
       mode: initialAssignment ? "edit" : "new",
+      isPublished: initialAssignment?.status === "published",
       draft,
       update,
       step,
@@ -457,6 +463,11 @@ export function WizardProvider({
   ]);
 
   return <WizardContext.Provider value={value}>{children}</WizardContext.Provider>;
+}
+
+/** Like useWizard, but null outside a provider (e.g. the page's loading shell). */
+export function useOptionalWizard() {
+  return useContext(WizardContext);
 }
 
 export function useWizard() {

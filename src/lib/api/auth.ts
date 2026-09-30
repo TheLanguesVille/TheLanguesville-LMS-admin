@@ -69,6 +69,8 @@ export async function verifyOtp(
   });
 
   if (result.success) {
+    // Drop anything cached for a previous session before starting this one.
+    clearSession();
     setToken(result.data.token);
   }
 

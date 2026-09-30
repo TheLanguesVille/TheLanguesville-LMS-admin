@@ -35,12 +35,26 @@ export interface ListCoursesQuery {
 
 export interface ListCoursesData {
   courses: CourseSummary[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+/**
+ * Every course the signed-in account can see (instructors: their own; admins:
+ * all of them), following the backend's pagination.
+ */
+export async function listAllCourses(
+  params: Omit<ListCoursesQuery, "page" | "limit"> = {},
+): Promise<ApiResult<CourseSummary[]>> {
+  const courses: CourseSummary[] = [];
+  for (let page = 1; ; page++) {
+    const result = await listCourses({ ...params, page, limit: 100 });
+    if (!result.success) return result;
+    courses.push(...result.data.courses);
+    if (page >= (result.data.totalPages || 1)) break;
+  }
+  return { success: true, data: courses };
 }
 
 export async function listCourses(

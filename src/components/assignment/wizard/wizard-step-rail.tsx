@@ -2,7 +2,7 @@
 
 import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { Check } from "lucide-react";
-import { useWizard, type WizardStep } from "./wizard-context";
+import { useOptionalWizard, type WizardStep } from "./wizard-context";
 
 const STEPS: { number: WizardStep; label: string }[] = [
   { number: 1, label: "Basic Info" },
@@ -13,14 +13,19 @@ const STEPS: { number: WizardStep; label: string }[] = [
 ];
 
 export function WizardStepRail() {
-  const { step: current, setStep, furthestComplete } = useWizard();
+  // The edit page shows the shell (and this rail) while the assignment is
+  // still loading, before any WizardProvider exists — render inert steps then.
+  const wizard = useOptionalWizard();
+  const current = wizard?.step ?? 1;
+  const furthestComplete = wizard?.furthestComplete ?? 0;
+  const setStep = (s: WizardStep) => wizard?.setStep(s);
 
   return (
     <Stack gap={2}>
       {STEPS.map((s) => {
         const isActive = s.number === current;
         const isComplete = s.number < current && s.number <= furthestComplete + 1;
-        const navigable = s.number <= furthestComplete + 1;
+        const navigable = Boolean(wizard) && s.number <= furthestComplete + 1;
 
         return (
           <HStack

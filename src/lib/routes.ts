@@ -30,7 +30,7 @@ export const coursePaths = {
 export const assignmentPaths = {
   list: "/assignment",
   new: "/assignment/new",
-  /** Resume a draft in the builder. */
+  /** Resume a draft, or edit a published assignment, in the builder. */
   edit: (assignmentId: string) => `/assignment/edit${qs({ assignmentId })}`,
   details: (assignmentId: string) =>
     `/assignment/details${qs({ assignmentId })}`,
@@ -64,4 +64,12 @@ export const instructorPaths = {
 
 export const invitationPaths = {
   list: "/invitations",
+};
+
+export const messagePaths = {
+  inbox: "/messages",
+  conversation: (conversationId: string) =>
+    `/messages${qs({ c: conversationId })}`,
+  /** Opens (or starts) the conversation with this student. */
+  withStudent: (studentId: string) => `/messages${qs({ student: studentId })}`,
 };
