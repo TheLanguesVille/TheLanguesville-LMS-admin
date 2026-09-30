@@ -224,7 +224,7 @@ function InstructorDetailsContent() {
   if (!instructorId) {
     return (
       <Box>
-        <DashboardHeader title="Instructors" notificationCount={1} loading={adminLoading} user={userChip} />
+        <DashboardHeader title="Instructors" loading={adminLoading} user={userChip} />
         <Flex align="center" justify="center" py="200px">
           <Text color="gray.500">Instructor not found.</Text>
         </Flex>
@@ -246,7 +246,7 @@ function InstructorDetailsContent() {
 
   return (
     <Box>
-      <DashboardHeader title="Instructors" notificationCount={1} loading={adminLoading} user={userChip} />
+      <DashboardHeader title="Instructors" loading={adminLoading} user={userChip} />
 
       <Box px={8} py={6}>
         {/* Top actions */}

@@ -166,7 +166,6 @@ function RoleDetailContent() {
       <Box>
         <DashboardHeader
           title="Settings"
-          notificationCount={1}
           loading={adminLoading}
           user={userChip}
         />
@@ -184,7 +183,6 @@ function RoleDetailContent() {
     <Box>
       <DashboardHeader
         title="Settings"
-        notificationCount={1}
         loading={adminLoading}
         user={userChip}
       />

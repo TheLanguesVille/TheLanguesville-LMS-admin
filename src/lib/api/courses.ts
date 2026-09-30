@@ -361,3 +361,43 @@ export async function listCourseReviews(
     { method: "GET" },
   );
 }
+
+/* ------------------------------------------------------------------ *
+ * Cohort progress — per-student completion for one course
+ * ------------------------------------------------------------------ */
+
+export interface CohortStudent {
+  id: string;
+  name: string;
+  initials: string;
+  avatarUrl: string | null;
+  /** 0-100 completion of this course. */
+  progress: number;
+  status: "active" | "completed";
+  enrolledAt: string;
+}
+
+export interface CourseCohortData {
+  /** Students enrolled (dropped enrolments excluded). */
+  total: number;
+  completed: number;
+  averageProgress: number;
+  /** Most-progressed first. */
+  students: CohortStudent[];
+  page: number;
+  totalPages: number;
+}
+
+export async function getCourseCohort(
+  courseId: string,
+  params: { page?: number; limit?: number } = {},
+): Promise<ApiResult<CourseCohortData>> {
+  const qs = new URLSearchParams();
+  if (params.page) qs.append("page", String(params.page));
+  if (params.limit) qs.append("limit", String(params.limit));
+  const query = qs.toString();
+  return apiClient<CourseCohortData>(
+    `/courses/${courseId}/cohort${query ? `?${query}` : ""}`,
+    { method: "GET" },
+  );
+}

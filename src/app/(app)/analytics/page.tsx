@@ -200,7 +200,6 @@ export default function AnalyticsPage() {
       <Box>
         <DashboardHeader
           title="Analytics"
-          notificationCount={1}
           loading={adminLoading}
           user={userChip}
         />
@@ -231,7 +230,6 @@ export default function AnalyticsPage() {
     <Box>
       <DashboardHeader
         title="Analytics"
-        notificationCount={1}
         loading={adminLoading}
         user={userChip}
       />
