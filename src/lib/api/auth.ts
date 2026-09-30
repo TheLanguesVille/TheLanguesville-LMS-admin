@@ -37,12 +37,6 @@ export interface AcceptInviteData {
   message: string;
 }
 
-export interface InviteData {
-  inviteId: string;
-  email: string;
-  message: string;
-}
-
 export function isSuperAdmin(profile: AdminProfile | null | undefined): boolean {
   return profile?.role === "superadmin";
 }
@@ -95,16 +89,6 @@ export async function acceptInvite(
   return apiClient<AcceptInviteData>("/admin/accept-invite", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
-}
-
-/** Superadmin-only: email a new admin an invite link. No token is returned. */
-export async function inviteAdmin(
-  email: string,
-): Promise<ApiResult<InviteData>> {
-  return apiClient<InviteData>("/admin/invite", {
-    method: "POST",
-    body: JSON.stringify({ email }),
   });
 }
 

@@ -22,7 +22,7 @@ import {
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { InviteAdminDialog } from "@/components/admin/invite-admin-dialog";
+import { AddLessonModal } from "@/components/dashboard/add-lesson-modal";
 import { CourseCard } from "@/components/dashboard/course-card";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { QuickActionCard } from "@/components/dashboard/quick-action-card";
@@ -30,16 +30,18 @@ import { SearchInput } from "@/components/dashboard/search-input";
 import { SegmentedTabs } from "@/components/dashboard/segmented-tabs";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { StudentsChart } from "@/components/dashboard/students-chart";
+import { InviteAdminModal } from "@/components/settings/invite-admin-modal";
 import {
   type DashboardData,
   type Period,
   formatStatValue,
   getDashboard,
 } from "@/lib/api/analytics";
-import { isSuperAdmin, roleLabel } from "@/lib/api/auth";
+import { roleLabel } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/client";
 import { useAdmin } from "@/lib/hooks/use-admin";
 import { usePermissions } from "@/lib/hooks/use-permissions";
+import { assignmentPaths, coursePaths } from "@/lib/routes";
 
 const RANGE_TABS: { value: Period; label: string }[] = [
   { value: "12months", label: "12 months" },
@@ -73,6 +75,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [period, setPeriod] = useState<Period>("12months");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [addLessonOpen, setAddLessonOpen] = useState(false);
   const { admin, loading: adminLoading } = useAdmin();
   const { has, loading: permissionsLoading } = usePermissions();
 
@@ -81,8 +84,10 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const firstName = admin?.firstName ?? "";
-  const canInvite = isSuperAdmin(admin);
   const canViewAnalytics = has("analytics.view");
+  const canEditCourses = has("courses.edit");
+  // Same permission the backend checks on POST /settings/admins/invite.
+  const canInvite = has("settings.manage_admins");
 
   const fetchData = useCallback(async () => {
     if (permissionsLoading || !canViewAnalytics) return;
@@ -107,6 +112,65 @@ export default function DashboardPage() {
   // the permission there is nothing to show but the greeting and shortcuts.
   const metricsBlocked = !permissionsLoading && !canViewAnalytics;
   const showSkeletons = permissionsLoading || loading;
+
+  // Each shortcut only renders when the role can actually use it.
+  const quickActionItems = [
+    canEditCourses && (
+      <QuickActionCard
+        key="create-course"
+        icon={Plus}
+        title="Create Course"
+        description="Start curriculum builder"
+        onClick={() => router.push(coursePaths.new)}
+      />
+    ),
+    canEditCourses && (
+      <QuickActionCard
+        key="add-lesson"
+        icon={BookOpen}
+        title="Add Lesson"
+        description="Build content blocks"
+        onClick={() => setAddLessonOpen(true)}
+      />
+    ),
+    <QuickActionCard
+      key="assign-content"
+      icon={FileText}
+      title="Assign Content"
+      description="Set lessons & deadlines"
+      iconColor="#F97461"
+      iconBg="#FFE4DE"
+      onClick={() => router.push(assignmentPaths.new)}
+    />,
+    canInvite && (
+      <QuickActionCard
+        key="invite-admin"
+        icon={UserPlus}
+        title="Invite Admin"
+        description="Email a new admin invite"
+        onClick={() => setInviteOpen(true)}
+      />
+    ),
+  ].filter(Boolean);
+
+  const quickActions = (
+    <Box bg="white" rounded="lg" borderWidth="1px" borderColor="gray.200" p={5}>
+      <Heading as="h3" size="md" color="gray.900" mb={4}>
+        Quick Actions
+      </Heading>
+      {permissionsLoading ? (
+        <SimpleGrid columns={2} gap={3}>
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} height="104px" rounded="lg" />
+          ))}
+        </SimpleGrid>
+      ) : (
+        <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
+          {quickActionItems}
+        </SimpleGrid>
+      )}
+    </Box>
+  );
 
   const studentsChange = data?.studentsChart.changePercent ?? null;
   const studentsUp = studentsChange !== null && studentsChange >= 0;
@@ -303,45 +367,7 @@ export default function DashboardPage() {
                   )}
                 </Box>
 
-                <Box
-                  bg="white"
-                  rounded="lg"
-                  borderWidth="1px"
-                  borderColor="gray.200"
-                  p={5}
-                >
-                  <Heading as="h3" size="md" color="gray.900" mb={4}>
-                    Quick Actions
-                  </Heading>
-                  <Flex gap={3} wrap="wrap">
-                    <QuickActionCard
-                      icon={Plus}
-                      title="Create Course"
-                      description="Start curriculum builder"
-                      onClick={() => router.push("/courses/new")}
-                    />
-                    <QuickActionCard
-                      icon={BookOpen}
-                      title="Add Lesson"
-                      description="Build content blocks"
-                    />
-                    <QuickActionCard
-                      icon={FileText}
-                      title="Assign Content"
-                      description="Set lessons & deadlines"
-                      iconColor="#F97461"
-                      iconBg="#FFE4DE"
-                    />
-                    {canInvite ? (
-                      <QuickActionCard
-                        icon={UserPlus}
-                        title="Invite Admin"
-                        description="Email a new admin invite"
-                        onClick={() => setInviteOpen(true)}
-                      />
-                    ) : null}
-                  </Flex>
-                </Box>
+                {quickActions}
               </SimpleGrid>
 
               {/* Students chart */}
@@ -395,11 +421,20 @@ export default function DashboardPage() {
               </Box>
             </>
           )}
+
+          {/* Without metrics the shortcuts still work — show them alone. */}
+          {metricsBlocked || error ? quickActions : null}
         </Stack>
       </Box>
 
-      {canInvite ? (
-        <InviteAdminDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      {inviteOpen ? (
+        <InviteAdminModal
+          onClose={() => setInviteOpen(false)}
+          onSent={() => {}}
+        />
+      ) : null}
+      {addLessonOpen ? (
+        <AddLessonModal onClose={() => setAddLessonOpen(false)} />
       ) : null}
     </Box>
   );
