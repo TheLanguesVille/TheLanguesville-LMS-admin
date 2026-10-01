@@ -178,7 +178,15 @@ function isStepComplete(draft: AssignmentDraft, s: WizardStep): boolean {
         draft.title.trim() && draft.type && draft.selectedLessonIds.length > 0,
       );
     case 2:
-      return Boolean(draft.submissionType && draft.dueDate && draft.dueTime);
+      if (!(draft.submissionType && draft.dueDate && draft.dueTime)) return false;
+      // Mirror the backend publish precondition (contract §2.7): late
+      // submissions need a late deadline after the due date.
+      if (!draft.allowLate) return true;
+      if (!draft.lateDate) return false;
+      return (
+        new Date(`${draft.lateDate}T${draft.lateTime || "23:59"}:00`).getTime() >
+        new Date(`${draft.dueDate}T${draft.dueTime || "23:59"}:00`).getTime()
+      );
     case 3: {
       if (!draft.gradingMethod) return false;
       if (passing > total) return false;
@@ -397,17 +405,7 @@ export function WizardProvider({
     const rubricTotal = draft.rubric.reduce((sum, c) => sum + (c.points || 0), 0);
     const canProceed = (s: WizardStep): boolean => isStepComplete(draft, s);
 
-    // Mirror the backend publish preconditions (contract §2.7).
-    const lateOk = !draft.allowLate
-      ? true
-      : Boolean(draft.lateDate) &&
-        (() => {
-          const due = new Date(`${draft.dueDate}T${draft.dueTime || "23:59"}:00`);
-          const late = new Date(`${draft.lateDate}T${draft.lateTime || "23:59"}:00`);
-          return late.getTime() > due.getTime();
-        })();
-    const canPublish =
-      canProceed(1) && canProceed(2) && canProceed(3) && lateOk;
+    const canPublish = canProceed(1) && canProceed(2) && canProceed(3);
 
     let furthestComplete = 0;
     for (let s = 1 as WizardStep; s <= 5; s = (s + 1) as WizardStep) {

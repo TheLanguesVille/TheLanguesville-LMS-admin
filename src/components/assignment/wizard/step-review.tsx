@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
-import { CheckCircle2, Pencil } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
 import { TYPE_LABELS } from "@/lib/api/assignments";
 import { StepHeading } from "./wizard-bits";
 import { useWizard, type WizardStep } from "./wizard-context";
@@ -24,7 +24,7 @@ function formatTime(t: string): string {
 }
 
 export function StepReview() {
-  const { draft, setStep, courses, isPublished } = useWizard();
+  const { draft, setStep, courses, isPublished, canPublish } = useWizard();
 
   const selected = new Set(draft.selectedLessonIds);
   let courseName = "Not set";
@@ -66,7 +66,15 @@ export function StepReview() {
         : "Not set",
       step: 3,
     },
-    { label: "Late Submission", value: draft.allowLate ? "Allowed" : "Not allowed", step: 2 },
+    {
+      label: "Late Submission",
+      value: !draft.allowLate
+        ? "Not allowed"
+        : draft.lateDate
+          ? `Until ${formatDate(draft.lateDate)}${draft.lateTime ? ` - ${formatTime(draft.lateTime)}` : ""}`
+          : "Allowed — late deadline not set",
+      step: 2,
+    },
   ];
 
   return (
@@ -146,20 +154,37 @@ export function StepReview() {
         </Stack>
       ) : null}
 
-      <Flex gap={3} align="flex-start" bg="#F0FDF4" borderWidth="1px" borderColor="#BBF7D0" rounded="xl" p={5}>
-        <Box color="#16A34A" flexShrink={0} mt={0.5}>
-          <CheckCircle2 size={22} />
-        </Box>
-        <Stack gap={0.5}>
-          <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-            Ready to publish
-          </Text>
-          <Text fontSize="sm" color="gray.600">
-            This assignment will be visible to students in {courseName} immediately
-            after publishing.
-          </Text>
-        </Stack>
-      </Flex>
+      {canPublish ? (
+        <Flex gap={3} align="flex-start" bg="#F0FDF4" borderWidth="1px" borderColor="#BBF7D0" rounded="xl" p={5}>
+          <Box color="#16A34A" flexShrink={0} mt={0.5}>
+            <CheckCircle2 size={22} />
+          </Box>
+          <Stack gap={0.5}>
+            <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+              Ready to publish
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              This assignment will be visible to students in {courseName} immediately
+              after publishing.
+            </Text>
+          </Stack>
+        </Flex>
+      ) : (
+        <Flex gap={3} align="flex-start" bg="#FFFBEB" borderWidth="1px" borderColor="#FDE68A" rounded="xl" p={5}>
+          <Box color="#D97706" flexShrink={0} mt={0.5}>
+            <AlertTriangle size={22} />
+          </Box>
+          <Stack gap={0.5}>
+            <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+              Not ready yet
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              Some required details are missing or invalid. Use the steps on the
+              left to finish them.
+            </Text>
+          </Stack>
+        </Flex>
+      )}
     </Stack>
   );
 }
