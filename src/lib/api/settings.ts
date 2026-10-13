@@ -184,6 +184,13 @@ export interface RoleListItem {
   activeAdmins: RoleAdminSummary[];
   activeAdminsCount: number;
   permissionCount: number;
+  /**
+   * Catalog-order labels ("View courses", …) — the Change role picker's
+   * summary line, which can't read the catalog with only `manage_admins`.
+   */
+  permissionLabels: string[];
+  /** Coarse account type the role grants; only superadmins assign "superadmin". */
+  kind: "admin" | "superadmin";
   /** Built-in roles can't be deleted; hide the trash action. */
   isSystem: boolean;
   lastUpdated: string;
@@ -363,7 +370,11 @@ export async function reactivateAdmin(
   );
 }
 
-/** Moves an admin onto another role — how a role gains/loses active admins. */
+/**
+ * Moves an admin onto another role — how a role gains/loses active admins.
+ * 400s on your own account, on Super Admin targets/roles unless you're a
+ * superadmin, and on demoting the last superadmin.
+ */
 export async function changeAdminRole(
   adminId: string,
   roleId: string,

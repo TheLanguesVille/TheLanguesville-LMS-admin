@@ -304,3 +304,15 @@ export function relativeTime(iso: string | null | undefined): string {
   const years = Math.round(days / 365);
   return years === 1 ? "1 year ago" : `${years} years ago`;
 }
+
+/**
+ * Permanently deletes the account with its conversations, notifications and
+ * progress. Super Admin only — the API 403s everyone else.
+ */
+export async function deleteStudent(
+  studentId: string,
+): Promise<ApiResult<{ message?: string }>> {
+  return apiClient<{ message?: string }>(`/students/${studentId}`, {
+    method: "DELETE",
+  });
+}
