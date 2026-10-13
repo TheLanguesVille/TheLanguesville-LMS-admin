@@ -33,17 +33,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { NumberCard, PageTopBar } from "@/components/assignment/shared";
 import { Avatar } from "@/components/shared/avatar";
+import { ConfirmModal } from "@/components/shared/confirm-modal";
+import { isSuperAdmin } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/client";
 import {
   type ActivityItem,
   type ActivityType,
   type GradeItem,
   type StudentDetail,
+  deleteStudent,
   getStudentDetail,
   listStudentActivity,
   listStudentGrades,
   relativeTime,
 } from "@/lib/api/students";
+import { useAdmin } from "@/lib/hooks/use-admin";
 import { messagePaths, studentPaths } from "@/lib/routes";
 
 const LEVEL_BADGE = { bg: "#EEF0FB", color: "#4338CA" };
@@ -230,6 +234,11 @@ export default function StudentDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [gradesOpen, setGradesOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Deleting a student is Super Admin only — the API enforces it as well.
+  const { admin } = useAdmin();
+  const canDelete = isSuperAdmin(admin);
 
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [activityPage, setActivityPage] = useState(1);
@@ -294,6 +303,17 @@ export default function StudentDetailPage() {
     setActivityLoading(false);
   }, [studentId, activityPage]);
 
+  const remove = async () => {
+    if (!studentId) return;
+    const result = await deleteStudent(studentId);
+    if (result.success) {
+      toast.success("Student deleted");
+      router.replace(studentPaths.list);
+    } else {
+      toast.error(getApiErrorMessage(result, "Couldn't delete this student"));
+    }
+  };
+
   if (loading) {
     return (
       <Box pb={10}>
@@ -341,10 +361,17 @@ export default function StudentDetailPage() {
               </Text>
             </HStack>
           </Box>
-          <Button bg="#2E2F6F" color="white" rounded="full" h="40px" px={6} fontSize="sm" fontWeight="medium" _hover={{ bg: "#262760" }} onClick={() => router.push(messagePaths.withStudent(student.id))}>
-            <MessagesSquare size={16} />
-            Message
-          </Button>
+          <HStack gap={3}>
+            {canDelete ? (
+              <Box as="button" onClick={() => setDeleteOpen(true)} color="#DC2626" fontSize="sm" fontWeight="medium" cursor="pointer" px={2} _hover={{ textDecoration: "underline" }}>
+                Delete
+              </Box>
+            ) : null}
+            <Button bg="#2E2F6F" color="white" rounded="full" h="40px" px={6} fontSize="sm" fontWeight="medium" _hover={{ bg: "#262760" }} onClick={() => router.push(messagePaths.withStudent(student.id))}>
+              <MessagesSquare size={16} />
+              Message
+            </Button>
+          </HStack>
         </Flex>
 
         <HStack gap={4} mb={8}>
@@ -482,9 +509,26 @@ export default function StudentDetailPage() {
         </Grid>
       </Box>
 
-      
       {gradesOpen ? (
         <AllGradesModal studentId={student.id} onClose={() => setGradesOpen(false)} />
+      ) : null}
+      {deleteOpen ? (
+        <ConfirmModal
+          tone="danger"
+          title="Delete student?"
+          body={
+            <>
+              Deleting{" "}
+              <Text as="span" fontWeight="semibold" color="gray.900">
+                {student.name}
+              </Text>{" "}
+              will permanently remove their account, conversations and course progress. This action cannot be undone.
+            </>
+          }
+          confirmLabel="Delete student"
+          onConfirm={remove}
+          onClose={() => setDeleteOpen(false)}
+        />
       ) : null}
     </Box>
   );

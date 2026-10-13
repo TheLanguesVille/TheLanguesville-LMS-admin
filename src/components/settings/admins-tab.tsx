@@ -27,6 +27,7 @@ import { settingsPaths } from "@/lib/routes";
 import { AdminDetailsModal } from "./admin-details-modal";
 import { AdminStatusModal } from "./admin-status-modal";
 import { AdminStatusPill } from "./admin-status-pill";
+import { ChangeRoleModal } from "./change-role-modal";
 import { InviteAdminModal } from "./invite-admin-modal";
 
 const COLS = "1.3fr 1.5fr 0.9fr 0.8fr 0.9fr";
@@ -66,6 +67,7 @@ export function AdminsTab() {
 
   const [detailsFor, setDetailsFor] = useState<AdminListItem | null>(null);
   const [statusFor, setStatusFor] = useState<AdminListItem | null>(null);
+  const [roleFor, setRoleFor] = useState<AdminListItem | null>(null);
   const [inviting, setInviting] = useState(false);
 
   const fetchAdmins = useCallback(async () => {
@@ -337,6 +339,10 @@ export function AdminsTab() {
             setDetailsFor(null);
             setStatusFor(admin);
           }}
+          onChangeRole={(admin) => {
+            setDetailsFor(null);
+            setRoleFor(admin);
+          }}
           onOpenRoleSettings={(roleId) =>
             router.push(
               roleId ? settingsPaths.roleDetail(roleId) : settingsPaths.tab("roles"),
@@ -350,6 +356,23 @@ export function AdminsTab() {
           admin={statusFor}
           onConfirm={() => toggleStatus(statusFor)}
           onClose={() => setStatusFor(null)}
+        />
+      ) : null}
+
+      {/* Opened from Details, so both ways out lead back there — with the
+          new role's permissions once one has been applied. */}
+      {roleFor ? (
+        <ChangeRoleModal
+          admin={roleFor}
+          onClose={() => {
+            setRoleFor(null);
+            setDetailsFor(roleFor);
+          }}
+          onChanged={(updated) => {
+            setRoleFor(null);
+            setDetailsFor(updated);
+            fetchAdmins();
+          }}
         />
       ) : null}
 

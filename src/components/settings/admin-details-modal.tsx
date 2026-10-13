@@ -23,12 +23,14 @@ export function AdminDetailsModal({
   admin,
   onClose,
   onToggleStatus,
+  onChangeRole,
   onOpenRoleSettings,
 }: {
   /** The list row, shown immediately while the full detail loads. */
   admin: AdminListItem;
   onClose: () => void;
   onToggleStatus: (admin: AdminListItem) => void;
+  onChangeRole: (admin: AdminListItem) => void;
   onOpenRoleSettings: (roleId: string | null) => void;
 }) {
   const [detail, setDetail] = useState<AdminDetail | null>(null);
@@ -102,7 +104,23 @@ export function AdminDetailsModal({
               </Flex>
             </HStack>
             <Text fontSize="sm" color="gray.500">
-              Based on {admin.roleName} role
+              Based on {detail?.roleName ?? admin.roleName} role
+              {/* Your own role is off-limits here — the API refuses it too. */}
+              {admin.isYou ? null : (
+                <>
+                  {" "}
+                  <Text
+                    as="button"
+                    color="#F97461"
+                    fontWeight="medium"
+                    textDecoration="underline"
+                    cursor="pointer"
+                    onClick={() => onChangeRole(admin)}
+                  >
+                    Change role
+                  </Text>
+                </>
+              )}
             </Text>
           </Stack>
 
