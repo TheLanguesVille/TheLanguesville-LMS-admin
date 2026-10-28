@@ -41,6 +41,13 @@ export function isSuperAdmin(profile: AdminProfile | null | undefined): boolean 
   return profile?.role === "superadmin";
 }
 
+/** Admins and superadmins oversee all content (instructors only their own). */
+export function managesAllContent(
+  profile: AdminProfile | null | undefined,
+): boolean {
+  return profile?.role === "admin" || profile?.role === "superadmin";
+}
+
 /** Step A: email + password → emails a 6-digit OTP. */
 export async function login(
   email: string,
