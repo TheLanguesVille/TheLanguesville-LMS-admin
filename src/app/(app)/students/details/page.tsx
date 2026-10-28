@@ -23,6 +23,7 @@ import {
   Mail,
   Medal,
   MessagesSquare,
+  Plus,
   Star,
   Trophy,
   Upload,
@@ -34,11 +35,13 @@ import { toast } from "sonner";
 import { NumberCard, PageTopBar } from "@/components/assignment/shared";
 import { Avatar } from "@/components/shared/avatar";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
-import { isSuperAdmin } from "@/lib/api/auth";
+import { AssignCoursesModal } from "@/components/students/assign-courses-modal";
+import { isSuperAdmin, managesAllContent } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/client";
 import {
   type ActivityItem,
   type ActivityType,
+  type EnrolledCourse,
   type GradeItem,
   type StudentDetail,
   deleteStudent,
@@ -46,8 +49,10 @@ import {
   listStudentActivity,
   listStudentGrades,
   relativeTime,
+  removeStudentCourse,
 } from "@/lib/api/students";
 import { useAdmin } from "@/lib/hooks/use-admin";
+import { usePermissions } from "@/lib/hooks/use-permissions";
 import { messagePaths, studentPaths } from "@/lib/routes";
 
 const LEVEL_BADGE = { bg: "#EEF0FB", color: "#4338CA" };
@@ -239,6 +244,13 @@ export default function StudentDetailPage() {
   // Deleting a student is Super Admin only — the API enforces it as well.
   const { admin } = useAdmin();
   const canDelete = isSuperAdmin(admin);
+  // Assigning courses is admin-only and gated like inviting students.
+  const { has } = usePermissions();
+  const canAssign = managesAllContent(admin) && has("students.invite");
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [removing, setRemoving] = useState<EnrolledCourse | null>(null);
+  // Bumped after assigning/removing courses to refetch the detail payload.
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [activityPage, setActivityPage] = useState(1);
@@ -259,7 +271,7 @@ export default function StudentDetailPage() {
         setLoading(false);
         return;
       }
-      setLoading(true);
+      if (reloadKey === 0) setLoading(true);
       const result = await getStudentDetail(studentId);
       if (!active) return;
       if (result.success) {
@@ -280,7 +292,7 @@ export default function StudentDetailPage() {
       active = false;
       clearTimeout(id);
     };
-  }, [studentId]);
+  }, [studentId, reloadKey]);
 
   const loadMoreActivity = useCallback(async () => {
     if (!studentId) return;
@@ -302,6 +314,18 @@ export default function StudentDetailPage() {
     }
     setActivityLoading(false);
   }, [studentId, activityPage]);
+
+  const removeCourse = async () => {
+    if (!studentId || !removing) return;
+    const result = await removeStudentCourse(studentId, removing.courseId);
+    if (result.success) {
+      toast.success(`Removed access to ${removing.title}`);
+      setRemoving(null);
+      setReloadKey((k) => k + 1);
+    } else {
+      toast.error(getApiErrorMessage(result, "Couldn't remove this course"));
+    }
+  };
 
   const remove = async () => {
     if (!studentId) return;
@@ -406,25 +430,38 @@ export default function StudentDetailPage() {
             <Heading as="h2" size="md" color="gray.900">
               Enrolled Courses
             </Heading>
-            {enrolledCourses.length > 0 ? (
-              <HStack gap={3}>
-                {([ChevronLeft, ChevronRight] as const).map((Icon, i) => (
-                  <Flex key={i} as="button" onClick={() => scrollCarousel(i === 0 ? -1 : 1)} w="36px" h="36px" rounded="full" borderWidth="1px" borderColor="gray.200" align="center" justify="center" color="gray.500" cursor="pointer" _hover={{ bg: "gray.50" }}>
-                    <Icon size={16} />
-                  </Flex>
-                ))}
-              </HStack>
-            ) : null}
+            <HStack gap={3}>
+              {canAssign ? (
+                <Button variant="outline" rounded="full" h="36px" px={4} fontSize="sm" fontWeight="medium" borderColor="gray.200" color="#2E2F6F" onClick={() => setAssignOpen(true)}>
+                  <Plus size={16} />
+                  Assign courses
+                </Button>
+              ) : null}
+              {enrolledCourses.length > 0
+                ? ([ChevronLeft, ChevronRight] as const).map((Icon, i) => (
+                    <Flex key={i} as="button" onClick={() => scrollCarousel(i === 0 ? -1 : 1)} w="36px" h="36px" rounded="full" borderWidth="1px" borderColor="gray.200" align="center" justify="center" color="gray.500" cursor="pointer" _hover={{ bg: "gray.50" }}>
+                      <Icon size={16} />
+                    </Flex>
+                  ))
+                : null}
+            </HStack>
           </Flex>
           {enrolledCourses.length === 0 ? (
-            <EmptyCard title="No enrolled courses yet" subtitle="Courses this student enrolled in will appear here" />
+            <EmptyCard title="No enrolled courses yet" subtitle={canAssign ? "Use “Assign courses” to give this student access" : "Courses this student enrolled in will appear here"} />
           ) : (
             <Grid ref={carouselRef} gridAutoFlow="column" gridAutoColumns={{ base: "minmax(280px, 1fr)", md: "calc(50% - 10px)" }} gap={5} overflowX="auto" scrollSnapType="x mandatory" css={{ "&::-webkit-scrollbar": { display: "none" } }}>
               {enrolledCourses.map((c) => (
                 <Box key={c.enrollmentId} borderWidth="1px" borderColor="gray.200" rounded="xl" p={5} scrollSnapAlign="start">
-                  <Box display="inline-block" bg={LEVEL_BADGE.bg} color={LEVEL_BADGE.color} fontSize="xs" fontWeight="semibold" px={2.5} py={1} rounded="full" mb={3}>
-                    {c.level}
-                  </Box>
+                  <Flex justify="space-between" align="center" mb={3}>
+                    <Box display="inline-block" bg={LEVEL_BADGE.bg} color={LEVEL_BADGE.color} fontSize="xs" fontWeight="semibold" px={2.5} py={1} rounded="full">
+                      {c.level}
+                    </Box>
+                    {canAssign ? (
+                      <Box as="button" onClick={() => setRemoving(c)} color="gray.400" fontSize="xs" fontWeight="medium" cursor="pointer" _hover={{ color: "#DC2626" }}>
+                        Remove access
+                      </Box>
+                    ) : null}
+                  </Flex>
                   <Text fontWeight="semibold" color="gray.900" mb={1}>
                     {c.title}
                   </Text>
@@ -511,6 +548,35 @@ export default function StudentDetailPage() {
 
       {gradesOpen ? (
         <AllGradesModal studentId={student.id} onClose={() => setGradesOpen(false)} />
+      ) : null}
+      {assignOpen ? (
+        <AssignCoursesModal
+          studentId={student.id}
+          studentName={student.name}
+          onClose={() => setAssignOpen(false)}
+          onAssigned={() => setReloadKey((k) => k + 1)}
+        />
+      ) : null}
+      {removing ? (
+        <ConfirmModal
+          tone="warning"
+          title="Remove course access?"
+          body={
+            <>
+              <Text as="span" fontWeight="semibold" color="gray.900">
+                {student.name}
+              </Text>{" "}
+              will lose access to{" "}
+              <Text as="span" fontWeight="semibold" color="gray.900">
+                {removing.title}
+              </Text>
+              . Their grades and history are kept, and you can assign the course again later, but lesson progress restarts.
+            </>
+          }
+          confirmLabel="Remove access"
+          onConfirm={removeCourse}
+          onClose={() => setRemoving(null)}
+        />
       ) : null}
       {deleteOpen ? (
         <ConfirmModal

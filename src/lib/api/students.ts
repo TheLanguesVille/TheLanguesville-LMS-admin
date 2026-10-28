@@ -316,3 +316,59 @@ export async function deleteStudent(
     method: "DELETE",
   });
 }
+
+/* ------------------------------------------------------------------ *
+ * Assign courses (admin only) — grant an existing student access to
+ * published courses without them paying, or take that access away.
+ * ------------------------------------------------------------------ */
+
+export interface AssignableCourse {
+  id: string;
+  title: string;
+  level: CefrLevel;
+  instructorName: string | null;
+  /** Student can already open it — shown as "Enrolled" and not selectable. */
+  alreadyEnrolled: boolean;
+}
+
+export async function listAssignableCourses(
+  studentId: string,
+): Promise<ApiResult<AssignableCourse[]>> {
+  return apiClient<AssignableCourse[]>(
+    `/students/${studentId}/assignable-courses`,
+    { method: "GET" },
+  );
+}
+
+export interface AssignCoursesPayload {
+  courseIds: string[];
+  enrollmentType?: EnrollmentType;
+  /** Email the student about the new courses (default true). */
+  notifyStudent?: boolean;
+}
+
+export interface AssignCoursesData {
+  assigned: { courseId: string; title: string; enrollmentId: string }[];
+  skipped: { courseId: string; title: string | null; reason: string }[];
+}
+
+export async function assignCourses(
+  studentId: string,
+  payload: AssignCoursesPayload,
+): Promise<ApiResult<AssignCoursesData>> {
+  return apiClient<AssignCoursesData>(`/students/${studentId}/courses`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Marks the enrolment dropped — grades and history are kept. */
+export async function removeStudentCourse(
+  studentId: string,
+  courseId: string,
+): Promise<ApiResult<{ message?: string }>> {
+  return apiClient<{ message?: string }>(
+    `/students/${studentId}/courses/${courseId}`,
+    { method: "DELETE" },
+  );
+}
